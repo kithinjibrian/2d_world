@@ -3,200 +3,188 @@
 Documentation rules for all code in this project.
 Read this before writing any function, class, or module.
 
-The project has very little code today — the slide navigator in `vellum-monograph.html`. These
-rules govern that, and every line written after DECISION-001 resolves.
+Python 3.11+. Type hints on every public function; `mypy --strict` must pass on `sim/`.
 
 ---
 
-## The Two Layers of Documentation
+## The Three Layers of Documentation
 
-### Layer 1 — Block documentation (what this is)
+### Layer 1 — Docstrings (what this is)
 
-Every exported function, class, interface, and type alias gets a documentation block.
-Internal functions get one only if their purpose is not immediately obvious.
+Every public function, class, and module gets a docstring. Private helpers get one only if their
+purpose is not immediately obvious.
 
-**Format:**
+**Format** — NumPy style, since this is numerical code and the convention is expected here:
 
-    /**
-     * [One-sentence description of what this does from the caller's perspective.]
-     *
-     * [Optional second paragraph: when to use it, what to watch out for.]
-     *
-     * @param name - [What this param is. Include units, constraints, allowed values.]
-     * @returns [What is returned. For Result types, describe both the ok and error paths.]
-     * @throws [Only if this function is a deliberate exception to the Result rule]
-     *
-     * @example
-     * const result = getSlide(3)
-     * if (!result.ok) { ... }
-     */
+    def orbital_period(a: float, m_star: float, g2: float) -> float:
+        """Return the radial period of an orbit under 2D gravity.
+
+        Note this is the *radial* period, not the time to return to the same
+        angular position — no orbit closes under a 1/r force, so those differ.
+
+        Parameters
+        ----------
+        a : float
+            Semi-major axis, metres.
+        m_star : float
+            Stellar mass, kilograms.
+        g2 : float
+            The 2D gravitational constant, m^2 kg^-1 s^-2. Note the dimensions
+            differ from 3D G — see docs/AXIOMS.md section 2.
+
+        Returns
+        -------
+        float
+            Radial period in seconds.
+
+        Raises
+        ------
+        ValueError
+            If `a` or `m_star` is non-positive.
+
+        Examples
+        --------
+        >>> orbital_period(1.5e11, 2.0e30, G2)
+        4.27e7
+        """
 
 Rules:
-- The first line is always a single sentence. No "This function...". Start with the verb: "Fetches",
-  "Creates", "Returns", "Validates".
-- `@param` and `@returns` are required on every exported function. No exceptions.
-- One `@example` is required on every public API function. Not optional.
-- `@throws` is used only for deliberate exceptions to the Result pattern. Do not use it on service
-  functions.
+- The summary is one line, imperative or declarative, ending in a period. Start with the verb:
+  "Return", "Compute", "Integrate", "Raise". Not "This function returns...".
+- Parameters, Returns, and Raises are required on every public function. **Every physical parameter
+  states its units.** A float without units in the docstring is a bug waiting to happen.
+- One `Examples` block on every public API function.
+- Document what a function assumes about its inputs when it does not validate them.
 
 ### Layer 2 — Inline comments (why this decision was made)
 
-Inline comments explain decisions, not code.
+Comments explain decisions, not code.
 
-**Good:** `// Reset scroll — a slide is a page in a book, not a scroll position to preserve`
-**Bad:** `// Set scroll to top`
+**Good:** `# Integrate in the rotating frame — the apsis regresses ~105 deg/orbit, so the inertial frame needs a tiny timestep to resolve it`
+**Bad:** `# Loop over particles`
 
 Rules:
-- Comment above the line it explains, not at the end of it.
-- Use an inline comment when: a magic number appears, a library is used non-obviously, a performance
-  trade-off was made, a guard clause prevents a non-obvious bug, or a workaround exists for a known
-  issue.
-- Never comment what the code does. If the code needs a comment to explain what it does, rewrite the
-  code.
-- Every TODO carries a ticket or a date: `// TODO(DECISION-004): remove once the type scale is
-  tokenised`
+- Comment above the line, not trailing it.
+- Use one when: a magic number appears, a numerical method was chosen over an obvious alternative, a
+  tolerance was picked, a guard prevents a non-obvious failure, or a workaround exists.
+- Never comment what the code does. If it needs that, rewrite the code.
+- Every TODO carries a reference: `# TODO(DECISION-010): replace stub once Kell is derived`
 
-### Layer 3 — Canon references (Vellum-specific, mandatory)
+### Layer 3 — Derivation references (mandatory, and the point of the whole file)
 
-Any code, markup, or SVG that encodes a fact about Vellum carries a comment naming the plate it came
-from.
+**Every physical quantity carries a reference to where it came from.** One of three forms, matching
+the three categories in the DERIVATION RULE:
 
-**Good:** `// Plate XIII: 1,106 Sillfish species, one per sealed basin`
-**Bad:** `const SPECIES_COUNT = 1106`
+    # AXIOM (A2): Gauss's law in 2D — flux over a circle, so F ∝ 1/r
+    G2_EXPONENT = -1.0
 
-A number without a plate reference cannot be verified a session later, and an unverifiable number is
-indistinguishable from an invented one. See the CANON RULE in CLAUDE.md.
+    # WORLD CONSTANT: set per world instance, see World.from_seed
+    self.m_star = m_star
+
+    # DERIVED: from A4 (T^3 emission) and the structure solve in sim/star/structure.py
+    luminosity = 2 * np.pi * radius * SIGMA_2 * temperature**3
+
+A number without one of these is indistinguishable from an invented number a session later, and
+"was this derived or did someone type it?" is the question this project cannot afford to be unable
+to answer. This is what makes the DERIVATION RULE enforceable rather than aspirational.
+
+**Never** write a bare numeric literal in physics code. If it is not a mathematical constant like
+`2` or `np.pi`, it is one of the three categories above and it gets a name and a reference.
 
 ---
 
 ## Module-Level Documentation
 
-Every file gets a top-of-file comment block:
+Every module opens with:
 
-    /**
-     * [Module name]
-     *
-     * [One paragraph: what this module is responsible for and what it is NOT responsible for.]
-     *
-     * Depends on: [what this imports from]
-     * Used by: [what imports from this — omit if it is a leaf module]
-     */
+    """Two-dimensional stellar structure.
 
----
+    Solves hydrostatic equilibrium for a disc star under Gauss-law gravity and
+    T^3 radiative emission. Produces luminosity, radius and effective
+    temperature. Does NOT handle orbits or insolation at the planet — see
+    sim/orbit/.
 
-## Error Handling — the pattern, once DECISION-001 resolves to a typed runtime
+    Axioms used: A1, A2, A4, A5.
+    Depends on: sim.units, sim.constants
+    Used by: sim.orbit, sim.climate
+    """
 
-This project uses **return-based error handling**. Do not throw for expected failures.
-
-    Expected failure  →  return { ok: false, data: null, error: ... }
-    Truly unexpected  →  let it throw (programmer error, unrecoverable state)
-
-**Why:** TypeScript has no checked exceptions. A function that throws gives callers no type-level
-signal that failure is possible. A function that returns a Result makes every failure path visible,
-compiler-checked, and impossible to ignore silently.
-
-### The Pattern
-
-    // Define once in lib/result.ts
-    type Result<T, E = AppError> =
-      | { ok: true;  data: T; error: null }
-      | { ok: false; data: null; error: E }
-
-    function ok<T>(data: T): Result<T, never> {
-      return { ok: true, data, error: null }
-    }
-
-    function err<E>(error: E): Result<never, E> {
-      return { ok: false, data: null, error }
-    }
-
-    // Service layer — all try/catch lives here
-    async function getBasin(id: string): Promise<Result<Basin, "NOT_FOUND" | "READ_ERROR">> {
-      // Validate before the read — avoids a round-trip on obviously bad input
-      if (!isValidId(id)) return err("NOT_FOUND")
-
-      try {
-        const basin = await store.basins.find(id)
-        if (!basin) return err("NOT_FOUND")
-        return ok(basin)
-      } catch {
-        return err("READ_ERROR")
-      }
-    }
-
-    // Caller is forced to handle both paths
-    const result = await getBasin(id)
-    if (!result.ok) return handleError(result.error)   // result.error is typed
-    render(result.data)                                 // result.data is typed Basin
-
-### What Goes Where
-
-| Layer | Rule |
-|-------|------|
-| Service / domain | Returns `Result<T, E>`. All try/catch lives here. |
-| Controller / route handler | Calls the service, maps the Result to a response. No try/catch. |
-| UI component | Calls the service, reads `result.ok` to decide what to render. |
-| Third-party library calls | Wrapped in a thin adapter that converts throws into `err(...)`. |
-
-### What Still Throws
-
-- Programmer errors — accessing a property on null when it should never be null
-- Process-level failures — missing configuration at startup
-- Framework internals — do not catch exceptions that signal misconfiguration
-
-### Anti-Patterns
-
-- **Never** `throw new Error(...)` in a service function for a predictable failure.
-- **Never** `try/catch` in a controller — service errors come back as typed Results.
-- **Never** return `undefined` to signal failure — the caller cannot distinguish "not found" from
-  "returned nothing on purpose."
-- **Never** expose a raw library or database error message to the client.
-
-**If DECISION-001 resolves to an untyped runtime, this section must be rewritten before any code is
-written.** Its entire rationale is compiler-checked error paths; applying the ceremony without the
-compiler gets the cost and none of the benefit.
+The `Axioms used` line is required in any module that does physics. It is how a reader knows what
+the module's results rest on without tracing every call.
 
 ---
 
-## What Good Documentation Looks Like
+## Numerical Code Rules
 
-    /**
-     * Fetches a single basin by ID.
-     *
-     * Returns NOT_FOUND if the basin does not exist. Returns READ_ERROR if the underlying read
-     * fails — the caller should not retry automatically, as READ_ERROR indicates a store-level
-     * failure rather than a transient one.
-     *
-     * @param id - The basin's identifier. Must match /^basin-[0-9]{1,4}$/.
-     * @returns Result<Basin, "NOT_FOUND" | "READ_ERROR">
-     *
-     * @example
-     * const result = await getBasin("basin-0417")
-     * if (!result.ok) return respondWithError(result.error)
-     * return respond(result.data)
-     */
+These are specific to this project and matter more than style:
 
-## What Bad Documentation Looks Like — Do Not Write This
+- **Check for non-finite values at kernel boundaries.** Any function returning an array of physical
+  state checks for NaN and infinity and raises. A NaN that propagates a thousand steps costs an
+  afternoon; the check costs a microsecond.
+- **Never silently clamp.** If a value leaves its physical range, raise. Clamping hides the bug and
+  produces output that looks fine.
+- **State the tolerance and justify it.** `atol=1e-9` with no comment is a guess. Say what it is
+  relative to and why it is enough.
+- **Assert invariants at step boundaries**, behind a debug flag if the cost matters. Conservation,
+  boundedness and ordering checks localise a bug to a single tick — nothing else does that.
+- **Seed explicitly.** Every random source is a `numpy.random.Generator` passed in. Never
+  module-level `np.random.*`.
+- **Vectorise, but not at the cost of legibility.** A readable loop that runs once at setup is
+  better than an unreadable one-liner. A per-tick inner loop is a different matter — that one wants
+  to be array code.
 
-    // BAD: no block, no params, no example
-    async function getBasin(id) {
-      const basin = await store.basins.find(id)
-      return basin  // BAD: throws on read failure, returns undefined on not-found
-    }
+---
 
-    // BAD: describes what, not why
-    // Find the basin in the store by its ID
-    // If found, return the basin
+## Error Handling
+
+Exceptions, in the ordinary Python way. Do not build Result/Either types — see MEMORY.md decision 7.
+
+    Invalid input, impossible state, broken invariant  →  raise
+    Recoverable, expected, part of normal operation    →  return a value
+
+    class VellumError(Exception):
+        """Base for every error raised by this project."""
+
+    class DimensionError(VellumError):
+        """A quantity was used with the wrong physical dimensions."""
+
+    class InvariantError(VellumError):
+        """A physical invariant was violated — conservation, boundedness, ordering."""
+
+- Validate at module boundaries; public functions check arguments and raise immediately.
+- Raise a specific subclass. Never `raise Exception`, never raise a string.
+- Never `except:` or `except Exception:` without re-raising.
+- Let genuine programmer errors surface. Do not wrap an `IndexError` into something friendlier —
+  the traceback is the useful part.
+
+---
+
+## What Bad Code Looks Like Here — Do Not Write This
+
+    # BAD: 3D gravitational constant in a 2D world. Will not crash. Will be wrong.
+    G = 6.674e-11
+
+    # BAD: unattributed magic number — axiom, world constant, or derived? Unknowable.
+    def emission(t):
+        return 5.67e-8 * t**4          # BAD: T^4 is the 3D law; 2D is T^3
+
+    # BAD: no units, no reference, silent clamp, swallowed error
+    def temp(flux):
+        try:
+            return max(0.0, (flux / 5.67e-8) ** 0.25)
+        except Exception:
+            return 0.0
+
+Every line of that runs without complaint and every number it produces is meaningless.
 
 ---
 
 ## Documentation Anti-Patterns
 
-1. **Describing the code.** The code is the description. Comments explain what the code cannot.
-2. **Stale comments.** A comment that contradicts the code is worse than no comment. Change the code,
-   change its comment, in the same edit.
-3. **`// TODO` without a ticket or a date.** Untracked TODOs accumulate and rot.
-4. **Over-documenting internals.** Not every helper needs a block. Obvious private helpers do not.
-5. **Under-documenting the error contract.** Every exported function's `@returns` must describe its
-   failure paths. For callers, this is the most important part of the block.
-6. **A canon fact without its plate reference.** Vellum-specific and non-negotiable — see Layer 3.
+1. **Describing the code.** The code is the description. Comments explain what it cannot.
+2. **Stale comments.** A comment contradicting the code is worse than none. Change both in one edit.
+3. **A physical quantity without units in its docstring.**
+4. **A number without a derivation reference.** Non-negotiable — see Layer 3.
+5. **`# TODO` with no decision or ticket reference.**
+6. **A physics module without an `Axioms used` line.** The reader cannot tell what the result rests
+   on, which is the only thing that makes a derived result meaningful.

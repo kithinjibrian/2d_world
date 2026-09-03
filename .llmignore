@@ -18,21 +18,38 @@ LICENSE
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+poetry.lock
+uv.lock
 
 # Database migration history — order is sacred, never regenerate
 migrations/
 *.migration.ts
 *.migration.js
 
-# Build output — generated, not source
+# Build output and caches — generated, not source
 dist/
 build/
 .next/
 out/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Generated worlds and figures — reproducible from a seed, never hand-edited
+sim/out/
+*.npz
+*.h5
 
 # External guide this system was built from. Superseded by the files it produced.
 # Read for reference; never edit.
 setup.md
+
+# Frozen — reference material and an output target. Only via an approved PRP.
+# vellum-monograph.html
 
 # --- Append-only: read freely, add to the end, never rewrite or delete existing entries ---
 # CHANGELOG.md      past entries are never modified

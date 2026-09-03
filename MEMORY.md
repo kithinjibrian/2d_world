@@ -9,122 +9,173 @@ Open questions do not belong here — they live in `DECISIONS.md`.
 
 ## ARCHITECTURAL DECISIONS
 
-### 1. The monograph is a single self-contained HTML file
+### 1. The simulation is the authority; the monograph is a hypothesis
 
-**Decision:** `vellum-monograph.html` contains its own styles, scripts, and all 17 plates as inline
-SVG. The only external resources are two Google Fonts. It renders correctly opened directly from
-the filesystem, with no server and nothing installed.
+**Decision:** Vellum's physics is derived from first principles in two dimensions. Where the
+simulation and `vellum-monograph.html` disagree, the simulation is right. The monograph is a prior
+document written before anything was checked, and an eventual output target.
 
-**Why:** The document's durability is the point. A worldbuilding artefact that requires a build step,
-a package manager, or a running server is one dependency bump away from being unopenable. This one
-will open in ten years.
+**Why:** User direction in Session 3: *"we will discover our own physics. we are the ones doing the
+sim."* The value of the result depends entirely on it being derived rather than fitted. A world
+tuned to reproduce a guess teaches nothing about two-dimensional physics; it only reproduces the
+guess with extra steps.
 
-**Rules out:** External stylesheets and scripts. Image files. Icon libraries. Chart libraries. Any
-bundler or build step. Anything that fetches at runtime, since `file://` blocks it.
+**Rules out:** Tuning any parameter to match a monograph number. Treating monograph values as
+specifications, acceptance criteria, or test assertions. Correcting the monograph's physics by hand
+— it gets regenerated from simulation output.
 
-**Still provisional:** Whether this holds as the document grows is DECISION-005.
-
----
-
-### 2. Plates are hand-authored inline SVG, always in section view
-
-**Decision:** Every diagram is drawn by hand as SVG in the document, with a caption in the
-`Plate N.` form.
-
-**Why:** Vellum has two dimensions, so any honest diagram of it is a section. There is no plan view,
-no perspective, no three-quarter angle — those would depict a world that does not exist. A charting
-library cannot draw a Driftbladder's tendril curtain, and a generated chart would import a visual
-grammar (axes, legends, gridlines) that belongs to data, not to natural history illustration.
-
-**Rules out:** Canvas rendering. Chart and diagram libraries. Raster images. Any view that is not a
-profile.
+**Supersedes:** the previous decision 5, "Vellum's canon is closed and lives in the monograph",
+recorded in Session 1 and reversed in Session 3.
 
 ---
 
-### 3. Content and navigation are decoupled through `data-t`
+### 2. Every quantity is an axiom, a world constant, or a derived result
 
-**Decision:** Each slide is a `<section class="slide" data-t="Title">`. The navigator derives the
-table of contents, the position counter, and the masthead title from the slide list at load.
+**Decision:** Nothing enters the world by fiat. Each number is one of: an axiom (a free choice, in
+`docs/AXIOMS.md` §1), a world constant (an initial condition for one world instance), or a derived
+result carrying a reference to what derived it. Anything else is a bug.
 
-**Why:** Adding a slide should be a content edit, not a code edit. Any scheme where the TOC is
-written out by hand drifts out of sync with the slides on the first insertion.
+**Why:** Removing the monograph as an anchor removes the thing that was keeping the world honest.
+This is its replacement. Without an explicit axiom list, "we derive our own physics" degrades into
+typing in whatever number looks right, and the degradation is invisible — the code still runs.
 
-**Rules out:** Hardcoded TOC markup. Per-slide navigation wiring.
-
-**Known limit:** The roman-numeral array in the navigator is fixed at 18 entries. A 19th slide gets
-an `undefined` label with no error. Extend the array in the same edit that adds the slide.
-
----
-
-### 4. Colour is tokenised; typography and spacing are not
-
-**Decision:** Eight colour tokens live in `:root` and every colour in the document references one.
-Font sizes and spacing are currently hardcoded values.
-
-**Why:** Recorded as fact, not as endorsement. The colour system is genuinely enforced; the type
-scale is not. Writing this down prevents a future session from assuming `docs/DESIGN.md` describes
-a fully tokenised system and "restoring" tokens that never existed.
-
-**Rules out:** Nothing yet. Whether to tokenise the type scale retroactively is DECISION-004.
+**Rules out:** Unattributed constants. Hand-placed phenomena that should emerge (storms, basins,
+distributions). Free parameters that appear without a DECISIONS.md entry.
 
 ---
 
-### 5. Vellum's canon is closed and lives in the monograph
+### 3. Two spatial dimensions change every constant's dimensions
 
-**Decision:** `vellum-monograph.html` is the single source of truth for every fact about Vellum.
-Facts are not invented in passing — an absent fact is a decision that requires human input.
+**Decision:** A units layer with 2D dimensions is module zero, and no physical constant enters the
+codebase except through it. Density is kg·m⁻², pressure is N·m⁻¹, `G₂` is m²·kg⁻¹·s⁻², radiated flux
+scales as `T³`, and flux dilutes as `1/r`.
 
-**Why:** The world's coherence is its whole value. It is built as a chain of consequences from one
-premise (two dimensions, no sideways), and every creature and event is an answer to a constraint
-that premise creates. A single invented detail that does not descend from the premise breaks the
-chain, and the break is invisible until someone traces it.
+**Why:** This is the project's most dangerous silent failure. A 3D constant used in 2D does not
+crash — it produces a plausible float that means nothing, and the error surfaces several modules
+later as a climate number that cannot be traced. Dimensional tests written before physics tests
+catch it at the boundary.
 
-**Rules out:** New species. New numbers. Any mechanism requiring a third direction, a closed ring of
-tissue, sight, or rotation. See the CANON RULE in CLAUDE.md for the full prohibition list.
+**Rules out:** Importing numerical constants from 3D references. Reasoning about magnitudes by
+analogy with Earth.
 
 ---
 
-### 6. The project is documents now, code later
+### 4. Python, with numpy as the workhorse
 
-**Decision:** Vellum is currently a documents project. The code-specific rules in CLAUDE.md
-(testing, Result-type error handling, commands) are present but explicitly marked
-`[CODE — BLOCKED]` and inert until DECISION-001 resolves.
+**Decision:** Python 3.11+, numpy, scipy, matplotlib, pytest, mypy, ruff. Simulation in `sim/`. No
+game engine, no ECS, no simulation framework.
 
-**Why:** Writing the code rules now, blocked, is better than either omitting them (a future session
-starts a simulation with no rules) or activating them (a future session invents a stack to satisfy
-a rule that was never chosen). The block is the honest state.
+**Why:** Vellum's structures are 1D periodic arrays, which is numpy's native domain. Two properties
+make the fit unusually good rather than merely acceptable:
 
-**Rules out:** Adding a `package.json`, a bundler, a framework, or any dependency before DECISION-001
-resolves.
+- The atmosphere is genuinely two-dimensional, so an FFT-based 2D vorticity solver *is* Vellum's
+  atmosphere rather than a reduced model of one. The inverse energy cascade — storms consolidating
+  and persisting — emerges instead of being scripted.
+- Nothing passes anything on the surface, so an array of bodies sorted by position stays sorted for
+  the life of every body in it. See decision 5.
+
+**Rules out:** A framework layer. Notebook-driven development. The usual argument against Python for
+simulation (per-agent loops do not vectorise), which mostly does not apply here.
+
+---
+
+### 5. The array index is the spatial index, permanently
+
+**Decision:** Surface bodies are held in an array sorted by position. That order never changes except
+by birth and death. Neighbours are `i±1`. No spatial hash, no quadtree, no broad phase, no re-sort.
+
+**Why:** A topological consequence of two dimensions: two solid bodies on a line cannot exchange
+order without passing through each other. It is not an optimisation or an approximation — it is a
+theorem, and it means the naive data structure is also the optimal one.
+
+**Rules out:** Every conventional spatial-partitioning structure. Any code that re-sorts by position
+each tick — if that appears necessary, something has violated the ordering invariant and that is a
+bug worth finding.
+
+---
+
+### 6. Determinism is a hard requirement
+
+**Decision:** A seed reproduces a world byte-for-byte. Every random source is an explicitly seeded
+`numpy.random.Generator` threaded down from the world constructor. Generation is separate from
+query; worlds persist as data-only files and are loaded read-only.
+
+**Why:** A world you cannot regenerate is a world you cannot study. Findings need to be
+re-examinable, and a result that cannot be reproduced is an anecdote. The failure mode is silent —
+an unseeded call works perfectly until the day you need that specific world back.
+
+**Rules out:** Module-level `np.random.*`, the `random` module, clock or environment reads during
+generation, dependence on set or dict iteration order for numerical results. Pickling world state,
+for the separate reason that unpickling executes code.
+
+---
+
+### 7. Exceptions, not Result types
+
+**Decision:** Ordinary Python exceptions, all subclassing `VellumError`. Validation at module
+boundaries. `mypy --strict` on `sim/`. No Result/Either types.
+
+**Why:** The Result pattern earns its ceremony in a language with a compiler that can check
+exhaustiveness. Python has neither checked exceptions to route around nor a compiler to enforce the
+discipline, so porting the pattern costs readability and returns nothing. Static checking comes from
+mypy instead.
+
+**Rules out:** Result/Either types. Bare `except:` without re-raise. Silent clamping of
+out-of-range values. Letting non-finite values propagate — kernels check and raise.
+
+---
+
+### 8. The monograph is a single self-contained file, frozen
+
+**Decision:** `vellum-monograph.html` keeps its own styles, scripts, and all plates as inline SVG,
+with no build step, opening from `file://`. It is not edited by hand while frozen; generated plates
+are written in as inline SVG, never linked as external assets.
+
+**Why:** The document's durability is the point, and it matters more once the document is a
+generated artefact rather than less — output from a simulation should still be readable by someone
+who has neither the simulation nor a server.
+
+**Rules out:** External stylesheets, scripts, or image files. A bundler. Runtime fetches, which
+`file://` blocks anyway.
 
 ---
 
 ## CURRENT PROJECT STATE
 
 ### Fully Working
-- `vellum-monograph.html` — 18 slides, 17 inline SVG plates, keyboard and button navigation,
-  derived table of contents. Opens from `file://` with no server.
-- The context engineering system: CLAUDE.md, MEMORY.md, CONTEXT.md, DECISIONS.md, CHANGELOG.md,
-  `.llmignore`, `PRPs/`, `docs/`, `reports/`.
+- `vellum-monograph.html` — 18 slides, 17 inline SVG plates, keyboard and button navigation. Frozen
+  reference material.
+- The context system: CLAUDE.md, MEMORY.md, CONTEXT.md, DECISIONS.md, CHANGELOG.md, `.llmignore`,
+  `PRPs/`, `docs/`, `reports/`.
+- `docs/AXIOMS.md` §2 (dimensions) and §3 (established consequences) — derived, settled, usable.
 
 ### In Progress
-- Nothing. Session 1 built the context system and wrote no project content.
+- Nothing. No simulation code exists.
 
 ### Not Started
-- Everything downstream of DECISION-006 (what the project is for). No simulation, no additional
-  documents, no publishing target, no tests.
+- The entire simulation. `sim/` does not exist yet.
+- `docs/AXIOMS.md` §1, the axiom list, is DRAFT pending DECISION-009.
 
 ---
 
 ## NEXT SESSION START POINT
 
-Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md — in that order.
+Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md — in that order. Then read
+`docs/AXIOMS.md` in full; it is the anchor for everything.
 
-Before planning any work, resolve **DECISION-006** with the user: is Vellum a monograph to finish, a
-worldbuilding corpus to grow, or a simulation to build? Everything else waits on that answer, and
-DECISION-001 (runtime) mostly follows from it. DECISION-003 and DECISION-004 both have a
-recommendation recorded and can be resolved in the same pass in about five minutes each.
+Two decisions gate the first line of code:
 
-Do not open `vellum-monograph.html` for editing until a PRP exists. If the next task is content,
-read the relevant plate first and quote its numbers exactly — the CANON RULE lists the fixed values
-that must never be contradicted.
+- **DECISION-009 (the axiom set)** — specifically 9a: are `G₂` and `σ₂` fixed by fiat with
+  habitability left as a discovered outcome, tuned so a habitable world is guaranteed, or scanned as
+  a parameter space? Recommendation recorded: scan.
+- **DECISION-010 (Kell)** — derive the star from 2D stellar structure first, or stub its luminosity
+  behind a real interface and reach terrain sooner? Recommendation recorded: derive, given the
+  stated intent to build slowly.
+
+The first PRP is the **units and dimensions layer**, and it does not depend on either decision — it
+can be written and approved while they are still open. It is small, it is dull, and it is the single
+highest-leverage module in the project: it is what prevents 3D constants from silently entering a 2D
+world. Its tests are dimensional assertions, written before any physics.
+
+The intended layer order after that is: star → orbit → planet → surface → water → air → life. Each
+layer is only trustworthy if the one beneath it was finished and verified first.

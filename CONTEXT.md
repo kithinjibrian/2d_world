@@ -159,9 +159,99 @@ None.
 
 ---
 
-## SESSION 3 — 2026-09-03 — Simulation reframe — open
+## SESSION 3 — 2026-09-03 — Simulation reframe — closed
 
 Branch: setup/context-system
+
+### WHAT WAS DONE
+
+Reversed the central rule of the system built in Session 1, on user direction: *"don't worry about
+the monograph. we will discover our own physics. we are the ones doing the sim."*
+
+Session 1 made `vellum-monograph.html` the canon and every fact in it binding. That is now
+backwards. The simulation is the authority; the monograph is a prior hypothesis written before
+anything was checked, and an eventual output target. The CANON RULE is replaced by a **DERIVATION
+RULE**: every quantity is an axiom, a world constant, or a derived result, and carries a reference
+saying which. That discipline is what replaces the monograph as the thing keeping the world honest —
+without it, "we derive our own physics" degrades into typing in whatever number looks right, and the
+degradation is invisible because the code still runs.
+
+Created `docs/AXIOMS.md` as the new anchor. Section 1 (the axiom list) is DRAFT pending DECISION-009.
+Sections 2 and 3 are settled and were the substantive work of the session: the dimensions of
+physical quantities in 2D, and the consequences already derivable from two dimensions — no escape
+velocity, no atmospheric escape at all, `1/r` flux, `T³` emission, ~105° of apsidal regression per
+orbit, the inverse turbulent cascade, wave tails from the failure of Huygens' principle in even
+dimensions, recurrent random walks, and the topological prohibitions on rings and tunnels.
+
+Two findings worth carrying forward. **Dimensions are the project's most dangerous silent failure:**
+in 2D, density is kg·m⁻², pressure is N·m⁻¹, and `G₂` is m²·kg⁻¹·s⁻² — a 3D constant used here does
+not crash, it produces a plausible float that means nothing and surfaces three modules later as an
+untraceable climate number. Hence a units layer as module zero, with dimensional tests written
+before any physics. **And the earlier "canon as test suite" plan was exactly wrong** under the new
+frame: asserting monograph numbers would lock the simulation to a guess and disguise the lock as
+verification. Tests now assert invariants — conservation, boundedness, topology, ordering,
+finiteness — which hold for every world and every seed and do not presuppose the answer.
+
+Resolved five decisions and opened two.
+
+### FILES CREATED OR MODIFIED
+
+    docs/AXIOMS.md        — NEW. Axioms (draft), 2D dimensions table, established consequences
+    CLAUDE.md             — CANON RULE → DERIVATION RULE; TESTING and ERROR HANDLING unblocked and
+                            rewritten for Python; stack, commands, architecture, anti-patterns
+    MEMORY.md             — eight decisions, replacing the six read out of the monograph
+    DECISIONS.md          — 001/002/003/005/006 resolved; 009 and 010 opened; 004 reprioritised
+    docs/CODE_STYLE.md    — rewritten for Python; Layer 3 is now derivation references, not plate
+                            references; numerical-code rules added
+    PRPs/TEMPLATE.md      — canon check → derivation check; test section split three ways
+    PRPs/DISCOVERY.md     — question 7 now asks which axioms, and whether a new free parameter
+    README.md             — rewritten around the simulation and the 2D physics
+    CHANGELOG.md          — Unreleased updated
+    .llmignore            — Python caches, generated worlds, lockfiles; monograph marked frozen
+    CONTEXT.md            — this entry
+
+No simulation code was written. `sim/` does not exist; it arrives with the first approved PRP.
+
+### TESTS WRITTEN
+
+None — there is nothing to test yet. The testing *policy* changed substantially and is recorded in
+the TESTING RULE in CLAUDE.md and in DECISION-002.
+
+Verification performed: the apsidal-precession result was derived from the effective potential
+rather than recalled. For `F ∝ 1/r`, the radial and angular frequencies stand in the ratio `√2`, so
+the apsidal angle is `π/√2 ≈ 127.3°`, successive perihelia are `254.6°` apart, and the apsis line
+regresses ~105° per orbit — seasons cycle in ~3.4 orbits, not the monograph's ~900 years. This is
+also confirmed qualitatively by Bertrand's theorem, which permits closed orbits only for inverse-
+square and harmonic laws. **The first orbital integrator should re-confirm this numerically before
+anything is built on it.**
+
+### DECISIONS MADE
+
+- DECISION-006 resolved: simulation, built slowly, physics derived from first principles.
+- DECISION-001 resolved: Python 3.11+, numpy/scipy/matplotlib/pytest/mypy/ruff, no framework.
+- DECISION-002 resolved: pytest; dimensional, invariant and regression tests; no monograph numbers.
+- DECISION-003 resolved: 300 lines for code, no limit for documents.
+- DECISION-005 resolved: the monograph stays a single self-contained file.
+- Result types rejected for Python — exceptions plus `mypy --strict` instead. The Result pattern
+  earns its ceremony against a compiler that checks exhaustiveness; Python has none, so it costs
+  readability and returns nothing.
+
+### PENDING DECISIONS OPENED
+
+- DECISION-009 — the axiom set. Specifically 9a: are `G₂` and `σ₂` fixed by fiat with habitability
+  left as a discovered outcome, tuned so a habitable world is guaranteed, or scanned as a parameter
+  space? Recommendation: scan. This is philosophical as much as technical — one direction makes
+  Vellum found, the other makes it designed.
+- DECISION-010 — derive Kell from 2D stellar structure first, or stub its luminosity behind a real
+  interface and reach terrain sooner? Recommendation: derive, given the stated intent to go slowly.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** Branch `setup/context-system` is local only.
+- DECISION-009 and DECISION-010 both gate the layer order, though neither blocks the first PRP.
+- `docs/AXIOMS.md` §1 is DRAFT and labelled as such.
+- The monograph's three recorded defects are unchanged and now lower priority — it is frozen, and
+  the natural moment to fix them is when it is regenerated.
 
 ---
 
@@ -169,19 +259,21 @@ Branch: setup/context-system
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order. Then read
+`docs/AXIOMS.md` in full. It is the anchor for everything and it did not exist before Session 3.
 
-The first task is not code. **Resolve DECISION-006 with the user: is Vellum a monograph to finish, a
-worldbuilding corpus to grow, or a simulation to build?** Nothing downstream can be prioritised
-until that is answered, and DECISION-001 mostly follows from it. DECISION-003, -004 and -005 each
-have a recommendation recorded and can be closed in the same conversation in a few minutes.
+**The first PRP is the units and dimensions layer.** It does not depend on DECISION-009 or
+DECISION-010, so it can be written and approved while both are still open. It is small, it is dull,
+and it is the highest-leverage module in the project: it is the only thing standing between a 2D
+world and a 3D constant that enters it silently and is never traced. Its tests are dimensional
+assertions, written before any physics.
 
-If the answer is "finish the monograph", the highest-value first PRP is the `roman` array bug — it
-is the only recorded defect that will silently produce wrong output the next time a slide is added,
-and a slide is the most likely next change.
+Two questions to put to the user when convenient, neither blocking that PRP:
+- DECISION-009a — are the free constants fixed, tuned, or scanned?
+- DECISION-010 — derive Kell, or stub it behind a real interface?
 
-Do not open `vellum-monograph.html` for editing until a PRP exists and is approved. When you do,
-read the relevant plate first and quote its numbers exactly; the CANON RULE in CLAUDE.md lists the
-fixed values that must never be contradicted.
+Layer order after the units layer: star → orbit → planet → surface → water → air → life. Each layer
+is only trustworthy if the one beneath it was finished and verified first. Do not start a layer
+before the one below it passes its invariant tests.
 
-The branch has never been pushed. Confirm with the user whether it should be before building on it.
+Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

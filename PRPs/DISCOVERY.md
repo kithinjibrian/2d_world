@@ -10,7 +10,7 @@ Any time a feature or document is described in one or two sentences without spec
 - What the error and edge-case behavior should be
 - Which existing files it touches
 - What it must not touch
-- Which canon it depends on, and whether it needs any fact that does not yet exist
+- Which axioms it rests on, and whether it needs a new free parameter
 - Which open decisions in DECISIONS.md are relevant
 
 ## Question Sequence
@@ -25,11 +25,12 @@ Cover in order:
    missing
 5. Which existing files it reads from or writes to
 6. What it must never modify
-7. **Which plates establish the facts this depends on — and does it need any fact that is not yet
-   in the monograph?** If yes, that fact is a decision. Stop and get it approved before continuing
-   the interview.
+7. **Which axioms does this rest on, and does it introduce any new free parameter?** A new free
+   parameter is a new axiom. Stop and get it approved before continuing the interview. Also ask what
+   it must *not* contradict in `docs/AXIOMS.md` §3 — those are theorems, not preferences.
 8. Are there open entries in DECISIONS.md this depends on?
-9. What are the security implications — does anything enter the DOM that is not author-written?
+9. What are the security implications — any file loaded, any format that executes on load
+   (never pickle), any generated content entering the monograph's DOM?
 10. What does rollback look like if this is abandoned?
 11. How is success verified — what can be run or read to prove it works?
 
@@ -46,7 +47,8 @@ Before approving one, verify:
 - [ ] The work is described in terms of visible behavior or reader-visible content, not implementation
 - [ ] Every existing file the implementation will touch is listed
 - [ ] "Must NOT do" covers the most common wrong approaches for this type of work
-- [ ] The canon check is filled in and every new fact is flagged for approval
+- [ ] The derivation check is filled in and every new free parameter is flagged for approval
+- [ ] The test list separates dimensional, invariant and regression tests, and asserts no monograph number
 - [ ] Error handling describes what happens on every failure path
 - [ ] Security considerations are filled in — not left blank
 - [ ] Test cases or a verification list are written before implementation starts

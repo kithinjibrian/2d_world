@@ -1,15 +1,17 @@
 ## FEATURE: [one sentence]
 
 ## OBJECTIVE
-[2–3 sentences describing what "done" looks like from a reader's or user's perspective]
+[2–3 sentences describing what "done" looks like. For a physics module, say what it derives and
+what the result is used for downstream.]
 
 ## CONTEXT
 
 - Starting state: [which files currently exist and are relevant]
 - Ending state: [which files will be created or modified]
 - Related existing code: [specific file paths to read before starting]
-- Canon this depends on: [which plates in vellum-monograph.html establish the facts this uses —
-  quote the numbers you will rely on, so a mismatch is caught before implementation, not after]
+- Axioms this depends on: [which entries in docs/AXIOMS.md §1 this rests on, and which
+  established consequences in §3 it must not contradict]
+- New free parameters introduced: [each one is an axiom and needs approval — or "none"]
 - Open decisions that must be resolved first: [list DECISIONS.md entries that block this]
 - Related source files: [docs/source/... if this was shaped by a meeting, research, or constraint]
 
@@ -23,19 +25,19 @@
 - [explicit exclusion — be specific about why]
 - [explicit exclusion]
 
-## CANON CHECK
+## DERIVATION CHECK
 
 Confirm before implementation. Every box must be ticked or the PRP is not ready:
-- [ ] Every fact used appears in `vellum-monograph.html`, or is listed below as a new fact requiring
-      approval
-- [ ] Nothing introduced requires a third direction — no sideways, lateral, yaw, roll, around, beside
-- [ ] Nothing introduced sees, or is coloured, patterned, or displayed for an observer
-- [ ] Nothing introduced closes a ring of tissue — no through-gut, closed circulation, lens, wheel,
-      axle, or rotating joint
-- [ ] Everything introduced passes the profile test: it can be drawn as a single closed outline
-- [ ] The species count is unchanged at seven (Springhopper and Driftbladder are one animal)
+- [ ] Every quantity is classified as an axiom, a world constant, or a derived result
+- [ ] No constant or scaling law is imported from a 3D reference without being re-derived in 2D
+- [ ] All dimensions match docs/AXIOMS.md §2 (density kg·m⁻², pressure N·m⁻¹, G₂ m²·kg⁻¹·s⁻²,
+      emission ∝ T³, flux ∝ 1/r)
+- [ ] Nothing is tuned, fitted, or calibrated to reproduce a number from the monograph
+- [ ] Nothing that should emerge is hand-placed
+- [ ] Every new free parameter is listed above and approved
+- [ ] Any random source is an explicitly seeded Generator threaded from the world constructor
 
-New facts requiring human approval: [list them, or "none"]
+New free parameters requiring human approval: [list them, or "none"]
 
 ## ERROR HANDLING REQUIREMENTS
 
@@ -57,15 +59,23 @@ New facts requiring human approval: [list them, or "none"]
 
 ## TESTS TO WRITE
 
-List the specific test cases before any implementation begins:
-- [ ] Happy path: [describe]
-- [ ] Error path: [describe each failure variant]
-- [ ] Edge case: [describe]
+Written before any implementation. Three kinds, in order — see the TESTING RULE in CLAUDE.md.
 
-For document work, the equivalent is a verification list — what a reader can check to confirm the
-change is correct:
-- [ ] [e.g. the new plate's caption number follows the previous plate's]
-- [ ] [e.g. every number in the new prose matches its plate]
+**Dimensional** — every quantity carries its 2D dimensions:
+- [ ] [describe]
+
+**Invariant** — true for every world and every seed, not just this run:
+- [ ] Conservation: [which quantity, over what interval, within what tolerance and why]
+- [ ] Boundedness / topology / ordering: [whichever apply]
+- [ ] Finiteness: no NaN or infinity in any state array
+
+**Regression** — determinism:
+- [ ] A fixed seed reproduces byte-identical output
+
+**Error paths:**
+- [ ] [each raise, and what triggers it]
+
+No test may assert a number taken from the monograph.
 
 ## ROLLBACK PLAN
 
@@ -77,15 +87,20 @@ If this needs to be abandoned mid-implementation:
 ## ACCEPTANCE CRITERIA
 - [ ] [testable criterion]
 - [ ] [testable criterion]
-- [ ] Canon check above is fully ticked
-- [ ] The monograph still opens correctly from `file://` with no server
-- [ ] No new hardcoded colour — every colour references a token in `:root`
-- [ ] No new dependency, build step, or external file
+- [ ] Derivation check above is fully ticked
+- [ ] `pytest` passes
+- [ ] `mypy --strict sim/` passes
+- [ ] `ruff check sim/` passes
+- [ ] Every physical quantity has a units-bearing docstring and a derivation reference
+- [ ] Every physics module has an `Axioms used` line
+- [ ] No new dependency
+- [ ] No file over 300 lines
 - [ ] CHANGELOG.md updated
 - [ ] CONTEXT.md session entry closed
 
 ## VALIDATION
 Run these to verify completion:
-- `xdg-open vellum-monograph.html` — step through every slide with arrow keys, confirm the TOC,
-  position counter, and masthead all update and the first/last buttons disable correctly
-- [any feature-specific check]
+- `pytest`
+- `mypy --strict sim/`
+- `ruff check sim/`
+- [any module-specific check — e.g. "energy drift under 1e-9 relative over 1e6 steps"]
