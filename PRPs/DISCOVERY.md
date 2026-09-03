@@ -25,14 +25,17 @@ Cover in order:
    missing
 5. Which existing files it reads from or writes to
 6. What it must never modify
-7. **Which axioms does this rest on, and does it introduce any new free parameter?** A new free
-   parameter is a new axiom. Stop and get it approved before continuing the interview. Also ask what
-   it must *not* contradict in `docs/AXIOMS.md` §3 — those are theorems, not preferences.
-8. Are there open entries in DECISIONS.md this depends on?
-9. What are the security implications — any file loaded, any format that executes on load
+7. **Which axioms does this rest on, and does it introduce any new free parameter?** Name them by
+   tier identifier. A new free parameter is a new axiom — stop and get it approved before
+   continuing. Also ask what it must *not* contradict in `docs/AXIOMS.md` §3 — those are theorems.
+8. **Does it lean on anything in the abstraction ledger (§4)?** If so, any result it produces is a
+   consequence of a choice rather than a finding about 2D physics, and both the PRP and the module
+   must say so.
+9. Are there open entries in DECISIONS.md this depends on?
+10. What are the security implications — any file loaded, any format that executes on load
    (never pickle), any generated content entering the monograph's DOM?
-10. What does rollback look like if this is abandoned?
-11. How is success verified — what can be run or read to prove it works?
+11. What does rollback look like if this is abandoned?
+12. How is success verified — what can be run or read to prove it works?
 
 ## After the Interview
 

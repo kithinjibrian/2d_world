@@ -9,8 +9,10 @@ what the result is used for downstream.]
 - Starting state: [which files currently exist and are relevant]
 - Ending state: [which files will be created or modified]
 - Related existing code: [specific file paths to read before starting]
-- Axioms this depends on: [which entries in docs/AXIOMS.md §1 this rests on, and which
-  established consequences in §3 it must not contradict]
+- Axioms this depends on: [tiered identifiers from docs/AXIOMS.md §1 — e.g. T0.1, T1.1, T2.2 —
+  and which established consequences in §3 it must not contradict]
+- Abstracted layers this leans on: [entries from the §4 ledger, or "none". A result depending on one
+  of these is a consequence of a choice, not a finding about 2D physics — say so here]
 - New free parameters introduced: [each one is an axiom and needs approval — or "none"]
 - Open decisions that must be resolved first: [list DECISIONS.md entries that block this]
 - Related source files: [docs/source/... if this was shaped by a meeting, research, or constraint]
@@ -35,6 +37,9 @@ Confirm before implementation. Every box must be ticked or the PRP is not ready:
 - [ ] Nothing is tuned, fitted, or calibrated to reproduce a number from the monograph
 - [ ] Nothing that should emerge is hand-placed
 - [ ] Every new free parameter is listed above and approved
+- [ ] Every abstracted layer leaned on is listed above, and the module raises rather than returning a
+      plausible default where it cannot honestly answer
+- [ ] All computation is in natural units; no SI value appears outside the display layer
 - [ ] Any random source is an explicitly seeded Generator threaded from the world constructor
 
 New free parameters requiring human approval: [list them, or "none"]
@@ -92,7 +97,7 @@ If this needs to be abandoned mid-implementation:
 - [ ] `mypy --strict sim/` passes
 - [ ] `ruff check sim/` passes
 - [ ] Every physical quantity has a units-bearing docstring and a derivation reference
-- [ ] Every physics module has an `Axioms used` line
+- [ ] Every physics module has an `Axioms used` line, and an `Abstracts:` line where it applies
 - [ ] No new dependency
 - [ ] No file over 300 lines
 - [ ] CHANGELOG.md updated

@@ -12,41 +12,43 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
-### DECISION-009 — The axiom set
+### DECISION-009 — Which dimensionless ratios define a world, and how are they chosen?
 
 **Status:** open
-**Raised:** 2026-09-03 — Session 3
+**Raised:** 2026-09-03 — Session 3. Reframed 2026-09-03 — Session 4.
 **Resolved by:** human
-**Blocks:** All physics. `docs/AXIOMS.md` §1 is marked DRAFT until this resolves. Nothing derived
-can be trusted while the things it is derived *from* are unsettled.
+**Blocks:** Any world instantiation. Does not block the units layer or the axioms themselves.
 
-**Question:** What exactly are the free choices, and are the free constants tuned or fixed?
+**Question:** Session 4 settled the axiom tiers and adopted natural units, which dissolves the
+original form of this question. There is no longer a value of `G₂` or `σ₂` to choose — both are 1 by
+construction, and the reference mass and length fix the remaining scales (`docs/AXIOMS.md` §2). What
+is left is the only thing that was ever physical: **the dimensionless ratios that characterise a
+particular Vellum.**
 
-Six axioms are drafted in `docs/AXIOMS.md` §1 (two dimensions; Gauss-law gravity; Newtonian
-mechanics; `T³` blackbody radiation; classical thermodynamics; 2D Navier–Stokes). Those are
-uncontroversial. Three sub-questions are not:
+Candidates: Kell's mass to Vellum's; orbital radius to planetary radius; atmospheric scale height to
+radius; thermal to gravitational binding energy; the atmosphere's Reynolds number.
 
-**9a. Are `G₂` and `σ₂` tuned, or fixed?**
-- A) **Fixed by fiat, habitability discovered.** Pick values once, run, and find out whether a
-  living world is even possible. Honest, and the result means something — but there may be no
-  Vellum at the end of it.
-- B) **Tuned so that a habitable world exists.** Choose constants that admit liquid water and a
-  stable climate, then derive everything else from them. Guarantees a world; costs the claim that
-  the world is a discovery rather than a construction.
-- C) **Scan the parameter space.** Treat habitability as the output: sweep `G₂`/`σ₂`, map which
-  regions produce a stable lit surface, then pick a world from inside that region and record why.
-  Most work, best answer, and it makes "why is Vellum like this" a plot rather than an assertion.
+**9a — how are those ratios chosen?**
+- A) **Fixed by fiat, habitability discovered.** Pick a set, run, and find out whether a living world
+  is even possible. Honest, and the result means something — but there may be no Vellum at the end.
+- B) **Tuned so a habitable world exists.** Guarantees a world; costs the claim that it was found
+  rather than built.
+- C) **Scanned.** Treat habitability as output: sweep the ratios, map which regions give a stable lit
+  surface, then pick a world from inside that region and record why. Most work, best answer, and it
+  turns "why is Vellum like this" into a plot rather than an assertion.
 
-**9b. Is chemistry modelled, or abstracted?** A full 2D chemistry is a research project in itself.
-The alternative is treating composition as a small set of bulk species with assumed properties.
+**9b — is chemistry given any representation?** T1.3 abstracts matter entirely, so composition is
+currently a small set of bulk species with assumed properties. Confirm that is enough, or decide what
+minimal representation is needed.
 
-**9c. Is radiative transfer grey or spectral?** Grey is far cheaper and adequate for a first climate;
-spectral is needed if atmospheric composition is ever to matter qualitatively.
+**9c — is radiative transfer grey or spectral?** Grey is far cheaper and adequate for a first
+climate; spectral is needed only if composition is ever to matter qualitatively. Given T1.2 abstracts
+electromagnetism, spectral transfer would be false precision on top of a posited layer — grey is
+probably right until that changes.
 
-**Notes:** 9a is the real fork and it is philosophical as much as technical — one direction makes
-Vellum found, the other makes it designed. Recommend C: it preserves the discovery framing, and the
-habitability map is itself one of the more interesting results the project could produce. 9b and 9c
-can both be deferred behind an interface if 9a is settled.
+**Notes:** 9a is the real fork, and it is philosophical as much as technical: one direction makes
+Vellum found, the other makes it designed. Recommend C — the habitability map is itself one of the
+more interesting results available, and it is the only option that makes the answer falsifiable.
 
 ---
 
@@ -133,6 +135,32 @@ embedding or a fallback that holds up) and world-file size limits if generated d
 ---
 
 ## RESOLVED
+
+### DECISION-011 — Is electromagnetism modelled or abstracted?
+
+**Status:** resolved
+**Raised:** 2026-09-03 — Session 4
+**Resolved:** 2026-09-03 — Session 4
+
+**Question:** Does Vellum have an explicit electromagnetic field, or is light and material behaviour
+supplied as an effective theory?
+
+**Outcome:** Abstracted. There is no Maxwell solver. Radiative transport and material cohesion are
+posited at Tier 2 with declared parameters, recorded in the abstraction ledger at
+`docs/AXIOMS.md` §4. The interface is shaped so EM could be added later.
+
+**Rationale:** A 2D Maxwell solver is a project in itself and still yields no chemistry, because
+T1.3 abstracts matter's microstructure regardless. The cost is that light is posited rather than
+derived — acceptable only because it is declared: any module standing in for EM carries an
+`Abstracts:` line and must raise rather than return a plausible default where it cannot honestly
+answer.
+
+If it is ever added, 2D changes EM substantially: the magnetic field is a scalar rather than a
+vector, the photon has one polarization state instead of two, and the electric force falls as `1/r`.
+
+**Copied to MEMORY.md:** yes
+
+---
 
 ### DECISION-006 — What the project is for
 

@@ -6,7 +6,8 @@ Vellum is a simulation of a world with two spatial dimensions — one extended c
 vertical, no third direction. The project derives that world's physics from first principles rather
 than importing it. `vellum-monograph.html` is a prior hypothesis document, not a specification.
 
-Read `docs/AXIOMS.md` before writing any physics.
+Read `docs/AXIOMS.md` before writing any physics. Its axioms are tiered, it works in natural units
+rather than SI, and its §4 ledger records everything the project posits rather than derives.
 
 ---
 
@@ -40,8 +41,9 @@ The simulation is the authority on what is true about Vellum. Nothing enters the
 
 Every quantity in the codebase is exactly one of three things:
 
-1. **An axiom** — a free choice, listed in section 1 of `docs/AXIOMS.md`. Adding one requires human
-   approval and a DECISIONS.md entry. There are currently six.
+1. **An axiom** — a free choice, listed in `docs/AXIOMS.md` §1. Axioms are tiered: Tier 0 is
+   geometry and mechanics, Tier 1 the fundamental interactions, Tier 2 the effective theories.
+   Adding one requires human approval and a DECISIONS.md entry.
 2. **A world constant** — an initial condition for a particular world instance: the seed, Kell's
    mass, total angular momentum, initial composition.
 3. **A derived result** — computed from the above, carrying a comment naming what derived it.
@@ -57,13 +59,22 @@ three it is. If you cannot, stop and open a DECISIONS.md entry.
   simulation disagrees with the monograph, the monograph is wrong.
 - **Never import a constant or scaling law from a 3D reference without re-deriving it in 2D.**
   `G = 6.674e-11` is not `G₂` — it is not even the same kind of quantity. Density is kg·m⁻²,
-  pressure is N·m⁻¹, radiated flux goes as `T³`. See section 2 of `docs/AXIOMS.md`. Nothing will
-  crash if this is wrong; the numbers will simply be meaningless.
+  pressure is N·m⁻¹, radiated flux goes as `T³`. See `docs/AXIOMS.md` §2. Nothing will crash if
+  this is wrong; the numbers will simply be meaningless.
+- **Never express a constant in SI.** The project works in natural units: `G₂ = 1`, `σ₂ = 1`, and a
+  chosen reference mass and length fix the rest. There is no correct SI value for a constant of
+  another universe. Physics lives in dimensionless ratios; SI conversion happens only at the display
+  layer. See `docs/AXIOMS.md` §2.
+- **Never present a result that rests on an abstracted layer as a discovery.** Electromagnetism,
+  matter microstructure and chemistry are posited, not derived — `docs/AXIOMS.md` §4 is the ledger.
+  A result depending on one of those is a consequence of a choice, and must be reported that way. A
+  module standing in for an abstracted layer raises where it cannot honestly answer; it never
+  returns a plausible default.
 - **Never hand-place a phenomenon that should emerge.** Do not place storms, seed basins at chosen
   positions, or script a behaviour that the physics is supposed to produce. If it does not emerge,
   that is a finding to report, not a gap to fill.
-- **Never adjust a result to match section 3 of `docs/AXIOMS.md`.** Those are theorems. If the
-  simulation contradicts one, the derivation has a bug — find it.
+- **Never adjust a result to match `docs/AXIOMS.md` §3.** Those are theorems. If the simulation
+  contradicts one, the derivation has a bug — find it.
 - **Never write a number without a derivation reference.** See the CODE DOCUMENTATION RULE.
 
 **What the monograph is still good for:** the topological prohibitions it describes are real
@@ -79,8 +90,9 @@ Never write code without a PRP file in `PRPs/`.
 If a request arrives without a PRP:
 1. Do not write any code.
 2. Run the discovery interview in `PRPs/DISCOVERY.md` — one question at a time.
-3. Cover: what it does, what it derives, what it must not touch, which axioms it depends on, what
-   the invariant tests are.
+3. Cover: what it does, what it derives, what it must not touch, which axioms and which tier it
+   depends on, whether it leans on anything in the abstraction ledger, and what the invariant tests
+   are.
 4. Write the PRP to `PRPs/[feature-name].md`.
 5. Present it to the user for approval.
 6. Only build after explicit approval.
@@ -134,7 +146,8 @@ There are three kinds of test in this project, and the order matters:
 
 **1. Dimensional tests — write these first for any new module.** Assert that every quantity carries
 the 2D dimensions in `docs/AXIOMS.md` §2. These catch the failure mode that produces plausible
-wrong numbers instead of crashes.
+wrong numbers instead of crashes. Assert that dimensionless results really are dimensionless — in
+natural units a dimensional slip is easy to miss, because the offending constant is 1.
 
 **2. Invariant tests — the core of the suite.** Assert what must hold for *every* world and *every*
 seed, not what happened in one run:
@@ -233,12 +246,15 @@ Read `docs/CODE_STYLE.md` before writing any function, class, or module.
 Every public function, class, and type gets a docstring. Every non-obvious decision inside a
 function gets an inline comment explaining *why*, not what.
 
-**Vellum-specific and non-negotiable:** every physical quantity carries a derivation reference — the
-axiom it comes from, or the module that computed it.
+**Vellum-specific and non-negotiable:** every physical quantity carries a derivation reference —
+the tiered axiom it comes from, the module that computed it, or the abstracted layer it stands in
+for.
 
-    # A2: Gauss's law in 2D — flux over a circle, so F ∝ 1/r
-    # Derived in sim/star/structure.py — not a free parameter
-    # AXIOM (A4): σ₂ is a free constant, see DECISION-009
+    # AXIOM (T1.1): gravity is postulated, not geometric — 2+1D GR has zero
+    # propagating degrees of freedom. Gauss's law in a plane gives F ∝ 1/r.
+    # WORLD CONSTANT: set per world instance, see World.from_seed
+    # DERIVED: from T2.2 (T^3 emission) and the solve in sim/star/structure.py
+    # ABSTRACTED (T1.2): stands in for electromagnetism — see AXIOMS.md §4
 
 A number without a derivation reference is indistinguishable from an invented one a session later.
 This is the mechanism that makes the DERIVATION RULE enforceable rather than aspirational.
@@ -348,8 +364,10 @@ computation is array math on periodic domains; a framework would add indirection
    every body in it, and the array index *is* the spatial index. Neighbours are `i±1`. Do not build
    a spatial hash, a quadtree, or a broad phase; do not re-sort each tick. Births and deaths insert
    and delete — nothing else ever reorders.
-6. **Dimensions are enforced by the units layer, not by comments.** No physical constant enters the
-   codebase except through it. See `docs/AXIOMS.md` §2.
+6. **Natural units throughout; dimensions enforced by the units layer, not by comments.** `G₂ = 1`,
+   `σ₂ = 1`, with a chosen reference mass and length fixing the rest. No physical constant enters
+   the codebase except through the units layer, and no SI value appears outside the display layer.
+   See `docs/AXIOMS.md` §2.
 7. **Derived layers depend downward only.** Star → orbit → planet → surface → water → air → life.
    A lower layer never reads from a higher one. If it needs to, the layering is wrong — stop and
    open a decision.
@@ -361,21 +379,25 @@ computation is array math on periodic domains; a framework would add indirection
 1. **Never tune anything to match the monograph.** Restated from the DERIVATION RULE because it is
    the failure this project is most likely to suffer: the monograph is vivid and specific, and
    matching it feels like progress. It is the opposite.
-2. **Never import a 3D constant or scaling law.** In 2D, gravity goes as `1/r`, flux goes as `1/r`,
-   emission goes as `T³`, density is per area, pressure is per length. A 3D value substituted here
-   produces a plausible number that means nothing.
-3. **Never introduce an unseeded random source.** It silently destroys reproducibility, and you will
+2. **Never import a 3D constant or scaling law, and never reach for an SI value.** In 2D, gravity
+   goes as `1/r`, flux goes as `1/r`, emission goes as `T³`, density is per area, pressure is per
+   length. A 3D value substituted here produces a plausible number that means nothing, and there is
+   no correct SI value for a constant of another universe.
+3. **Never treat a posited quantity as a derived one.** If it is in the abstraction ledger
+   (`docs/AXIOMS.md` §4), any result depending on it is a consequence of a choice, not a finding
+   about two-dimensional physics.
+4. **Never introduce an unseeded random source.** It silently destroys reproducibility, and you will
    not notice until you try to regenerate a world you cared about.
-4. **Never hand-place an emergent phenomenon.** Storms, basins, and species distributions are
+5. **Never hand-place an emergent phenomenon.** Storms, basins, and species distributions are
    results. Placing them by hand and reporting them as findings is the deepest way to waste this
    project's time.
-5. **Never let a non-finite value propagate.** Check and raise at the kernel boundary.
-6. **Never add a framework, engine, or dependency to solve a structural problem.** The structure is
+6. **Never let a non-finite value propagate.** Check and raise at the kernel boundary.
+7. **Never add a framework, engine, or dependency to solve a structural problem.** The structure is
    arrays on periodic domains. If that feels insufficient, the design is wrong, not the tooling.
-7. **Never let a fact live only in the conversation.** A derivation you worked out and did not write
+8. **Never let a fact live only in the conversation.** A derivation you worked out and did not write
    down evaporates at the end of the session. It goes in `docs/AXIOMS.md`, a docstring, or a
    DECISIONS.md entry before the session closes.
-8. **Never edit `setup.md`.** External reference material.
+9. **Never edit `setup.md`.** External reference material.
 
 ---
 

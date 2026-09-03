@@ -255,9 +255,96 @@ anything is built on it.**
 
 ---
 
-## SESSION 4 — 2026-09-03 — Tiered axioms — open
+## SESSION 4 — 2026-09-03 — Tiered axioms — closed
 
 Branch: setup/context-system
+
+### WHAT WAS DONE
+
+Restructured `docs/AXIOMS.md` from a flat list of six axioms into three tiers, on user direction:
+define a few fundamental forces and let the rest follow, with electromagnetism abstracted for now.
+
+**Tier 0** is geometry and mechanics — two dimensions, Newtonian mechanics, a non-relativistic
+regime. **Tier 1** is the fundamental interactions — gravity, plus explicit declarations that
+electromagnetism and matter's microstructure are *not* modelled. **Tier 2** is the effective
+theories — thermodynamics, radiation, fluids, solids — each with a form the geometry constrains and
+parameters that are world constants.
+
+The tiering carries one correction to the user's framing, recorded because it will otherwise be
+rediscovered: **the chain from fundamental forces up to a climate is not computable**, in any number
+of dimensions. Nobody derives Navier–Stokes by simulating molecules. So the honest structure is not
+one fundamental layer generating everything but a stack of effective theories, and the thing that
+keeps that honest is each tier declaring what it *cannot* derive. Those declarations are collected
+in a new **abstraction ledger** (§4) — the single place recording everything posited rather than
+derived, so a result reflecting a choice can never be reported as a finding about 2D physics.
+
+**Gravity.** The user's instinct that gravity must be a direct attractive force was right, and for a
+stronger reason than stated. Geometric gravity is not merely awkward in 2D — it is empty. The
+graviton carries `d(d−3)/2` propagating degrees of freedom, which is exactly zero at d=3. In three
+dimensions the Riemann tensor is algebraically determined by Ricci (there is no Weyl tensor), so
+vacuum forces both to vanish and spacetime is flat wherever there is no matter. A point mass
+produces only a conical defect; masses in that geometry feel nothing, and nothing orbits
+(Deser–Jackiw–'t Hooft 1984). Doing gravity "properly" with GR in 2D yields no gravity at all, so it
+must be postulated. Recorded in T1.1 and MEMORY.md decision 4 specifically so a future session does
+not spend a week discovering it.
+
+**Units.** The user's concern that picking units and dimensions would be hard turned out to be
+largely dissolvable. There is no correct SI value for another universe's constant, so the project
+now works in natural units: `G₂ ≡ 1`, `σ₂ ≡ 1`, with a chosen reference mass and length fixing the
+rest — `[G₂] = L²M⁻¹T⁻²` fixes the time unit as `L_ref/√M_ref`, and `[σ₂] = MLT⁻³Θ⁻³` then fixes
+temperature. Two reference choices and two normalisations fix all four base units. What survives is
+the only thing that was ever physical: **dimensionless ratios**. That reframes DECISION-009 from
+"invent magnitudes" to "choose a handful of ratios", which is both tractable and scannable, and it
+reduces the units layer from a design problem to mechanical bookkeeping.
+
+One consequence worth carrying: in natural units a dimensional slip is *easier* to miss, because the
+offending constant is 1. So the dimensional tests must also assert that dimensionless results really
+are dimensionless.
+
+### FILES CREATED OR MODIFIED
+
+    docs/AXIOMS.md        — restructured into tiers; natural-units section; abstraction ledger;
+                            T1.1 rewritten with the 2+1D GR argument
+    CLAUDE.md             — tiered axiom references; two new DERIVATION RULE prohibitions (no SI
+                            outside display, no posited result presented as a discovery); a new
+                            anti-pattern; a fourth derivation-reference form for abstracted layers
+    MEMORY.md             — decisions 3–6 replaced and expanded: tiered axioms, postulated gravity,
+                            natural units, abstracted EM. Renumbered to 11, cross-refs fixed
+    DECISIONS.md          — 009 reframed around dimensionless ratios; 011 opened and resolved
+    docs/CODE_STYLE.md    — `Abstracts:` line required; fourth reference form; natural-units rule
+    PRPs/TEMPLATE.md      — derivation check gains abstraction and natural-units criteria
+    PRPs/DISCOVERY.md     — new question 8 on the abstraction ledger
+    README.md, CHANGELOG.md, CONTEXT.md
+
+No simulation code. `sim/` still does not exist.
+
+### TESTS WRITTEN
+
+None. Two derivations were done by hand and both should be re-confirmed in code:
+- The 2+1D graviton count, `d(d−3)/2 = 0`, cross-checked against the Riemann/Ricci component count
+  in three dimensions (6 and 6, no Weyl tensor).
+- The natural-units scheme closes: `G₂ = 1` fixes `T_ref = L_ref/√M_ref`, and `σ₂ = 1` then fixes
+  the temperature unit. This should be asserted directly in the units layer's tests.
+
+### DECISIONS MADE
+
+- DECISION-011 resolved: electromagnetism abstracted, not modelled.
+- Axioms are tiered, and each tier declares what it cannot derive.
+- Natural units adopted; SI confined to the display layer.
+- Gravity is postulated rather than geometric, for the reason above.
+
+### PENDING DECISIONS OPENED
+
+None new. DECISION-009 was reframed rather than opened — it is now about which dimensionless ratios
+define a world and whether they are fixed, tuned or scanned.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** Branch `setup/context-system` is local, now eight commits.
+- DECISION-009 (dimensionless ratios; fixed, tuned or scanned) and DECISION-010 (derive Kell or stub
+  it) remain open. Neither blocks the first PRP.
+- The apsidal precession result and the graviton count are hand derivations awaiting numerical
+  confirmation.
 
 ---
 
@@ -266,20 +353,22 @@ Branch: setup/context-system
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order. Then read
-`docs/AXIOMS.md` in full. It is the anchor for everything and it did not exist before Session 3.
+`docs/AXIOMS.md` in full; it was restructured in Session 4 and is the anchor for everything.
 
-**The first PRP is the units and dimensions layer.** It does not depend on DECISION-009 or
-DECISION-010, so it can be written and approved while both are still open. It is small, it is dull,
-and it is the highest-leverage module in the project: it is the only thing standing between a 2D
-world and a 3D constant that enters it silently and is never traced. Its tests are dimensional
-assertions, written before any physics.
+**Write the PRP for the units layer.** Session 4 made it much smaller than it first looked: natural
+units remove the need to invent any magnitude, so the module is mechanical — fix the base dimensions
+(mass, length, time, temperature), express everything else as a product of powers, check it
+automatically. Its tests are dimensional assertions written before any physics, and they must include
+that dimensionless results really are dimensionless, since in natural units a slip hides behind a
+constant equal to 1. It is unblocked by both open decisions.
 
-Two questions to put to the user when convenient, neither blocking that PRP:
-- DECISION-009a — are the free constants fixed, tuned, or scanned?
-- DECISION-010 — derive Kell, or stub it behind a real interface?
+Two questions for the user when convenient, neither blocking that PRP:
+- **DECISION-009a** — are the dimensionless ratios defining a world fixed, tuned, or scanned?
+  Recommendation: scanned.
+- **DECISION-010** — derive Kell from 2D stellar structure, or stub its luminosity behind a real
+  interface and reach terrain sooner?
 
-Layer order after the units layer: star → orbit → planet → surface → water → air → life. Each layer
-is only trustworthy if the one beneath it was finished and verified first. Do not start a layer
-before the one below it passes its invariant tests.
+Layer order after the units layer: star → orbit → planet → surface → water → air → life. Do not
+start a layer before the one below it passes its invariant tests.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

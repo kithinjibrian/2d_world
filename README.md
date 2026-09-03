@@ -3,8 +3,10 @@
 A simulation of a world with two spatial dimensions — one extended coordinate and one vertical,
 and no third direction.
 
-The physics is derived, not imported. In two dimensions gravity spreads over a circle rather than a
-sphere, so it falls as `1/r`, the potential is logarithmic, and **nothing can ever leave the
+The physics is derived, not imported. Gravity here cannot be spacetime curvature — general
+relativity in 2+1 dimensions has zero propagating degrees of freedom and produces no attraction
+whatsoever, so gravity has to be postulated as a direct force. It spreads over a circle rather than
+a sphere, so it falls as `1/r`, the potential is logarithmic, and **nothing can ever leave the
 system** — including its atmosphere, which therefore never thins. Blackbody emission scales as `T³`
 rather than `T⁴`, making climate a twitchier thing than it is here. Turbulence cascades backwards,
 so storms merge and persist instead of shredding. Huygens' principle fails in even dimensions, so no
@@ -38,7 +40,7 @@ drift. If you are an AI assistant, read these in order before doing anything:
 | File | What it is |
 |------|------------|
 | `CLAUDE.md` | Behavioral rules. Each one prevents a specific mistake. Start here. |
-| `docs/AXIOMS.md` | The axioms, the 2D dimensions, and the established consequences |
+| `docs/AXIOMS.md` | The tiered axioms, natural units, established consequences, and the ledger of what is posited rather than derived |
 | `MEMORY.md` | Resolved decisions, with reasoning and what they rule out |
 | `DECISIONS.md` | Open questions. An open decision blocks the code it affects |
 | `CONTEXT.md` | Session handoff log — what happened last session and where to pick up |

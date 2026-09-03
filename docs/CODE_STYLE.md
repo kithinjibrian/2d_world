@@ -72,17 +72,23 @@ Rules:
 
 ### Layer 3 — Derivation references (mandatory, and the point of the whole file)
 
-**Every physical quantity carries a reference to where it came from.** One of three forms, matching
-the three categories in the DERIVATION RULE:
+**Every physical quantity carries a reference to where it came from.** One of four forms — the
+three categories in the DERIVATION RULE, plus a fourth for anything standing in for an abstracted
+layer:
 
-    # AXIOM (A2): Gauss's law in 2D — flux over a circle, so F ∝ 1/r
-    G2_EXPONENT = -1.0
+    # AXIOM (T1.1): gravity is postulated, not geometric — 2+1D GR has zero
+    # propagating degrees of freedom. Gauss's law in a plane gives F ∝ 1/r.
+    GRAVITY_EXPONENT = -1.0
 
     # WORLD CONSTANT: set per world instance, see World.from_seed
     self.m_star = m_star
 
-    # DERIVED: from A4 (T^3 emission) and the structure solve in sim/star/structure.py
+    # DERIVED: from T2.2 (T^3 emission) and the structure solve in sim/star/structure.py
     luminosity = 2 * np.pi * radius * SIGMA_2 * temperature**3
+
+    # ABSTRACTED (T1.2): stands in for electromagnetism, which is not modelled.
+    # Any result depending on this is a consequence of a choice — AXIOMS.md §4.
+    opacity = self._assumed_opacity(species)
 
 A number without one of these is indistinguishable from an invented number a session later, and
 "was this derived or did someone type it?" is the question this project cannot afford to be unable
@@ -104,13 +110,16 @@ Every module opens with:
     temperature. Does NOT handle orbits or insolation at the planet — see
     sim/orbit/.
 
-    Axioms used: A1, A2, A4, A5.
+    Axioms used: T0.1, T0.2, T1.1, T2.1, T2.2.
+    Abstracts: nothing. (If it did, it would be named here and in AXIOMS.md section 4.)
     Depends on: sim.units, sim.constants
     Used by: sim.orbit, sim.climate
     """
 
-The `Axioms used` line is required in any module that does physics. It is how a reader knows what
-the module's results rest on without tracing every call.
+The `Axioms used` line is required in any module that does physics, naming axioms by their tier
+identifier. An `Abstracts:` line is required whenever the module stands in for something in the
+abstraction ledger. Together they let a reader see what a result rests on without tracing every call
+— and, crucially, whether it is a finding about 2D physics or a consequence of a choice.
 
 ---
 
@@ -129,6 +138,8 @@ These are specific to this project and matter more than style:
   boundedness and ordering checks localise a bug to a single tick — nothing else does that.
 - **Seed explicitly.** Every random source is a `numpy.random.Generator` passed in. Never
   module-level `np.random.*`.
+- **Work in natural units.** `G₂ = 1`, `σ₂ = 1`. Convert to SI only in display code, never in a
+  computation. A function taking or returning SI outside the display layer is a bug.
 - **Vectorise, but not at the cost of legibility.** A readable loop that runs once at setup is
   better than an unreadable one-liner. A per-tick inner loop is a different matter — that one wants
   to be array code.
@@ -137,7 +148,7 @@ These are specific to this project and matter more than style:
 
 ## Error Handling
 
-Exceptions, in the ordinary Python way. Do not build Result/Either types — see MEMORY.md decision 7.
+Exceptions, in the ordinary Python way. Do not build Result/Either types — see MEMORY.md decision 10.
 
     Invalid input, impossible state, broken invariant  →  raise
     Recoverable, expected, part of normal operation    →  return a value
@@ -162,6 +173,8 @@ Exceptions, in the ordinary Python way. Do not build Result/Either types — see
 ## What Bad Code Looks Like Here — Do Not Write This
 
     # BAD: 3D gravitational constant in a 2D world. Will not crash. Will be wrong.
+    # Worse: there is no correct SI value for another universe's constant. In
+    # natural units G2 = 1 and the question never arises.
     G = 6.674e-11
 
     # BAD: unattributed magic number — axiom, world constant, or derived? Unknowable.
@@ -188,3 +201,5 @@ Every line of that runs without complaint and every number it produces is meanin
 5. **`# TODO` with no decision or ticket reference.**
 6. **A physics module without an `Axioms used` line.** The reader cannot tell what the result rests
    on, which is the only thing that makes a derived result meaningful.
+7. **A module standing in for an abstracted layer with no `Abstracts:` line.** It disguises a choice
+   as a derivation — the one failure this project cannot detect after the fact.

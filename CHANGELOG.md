@@ -11,12 +11,22 @@ Never deleted. Older entries are never modified.
 ### Added
 - Context engineering system for AI sessions: behavioral rules, session handoff log, decision
   register, PRP templates, design system, and code style guide.
-- `docs/AXIOMS.md` — the project's axioms, the dimensions of physical quantities in two dimensions,
-  and the consequences already derived from them: no escape velocity, no atmospheric escape,
-  ~105° of apsidal regression per orbit, `T³` emission, `1/r` flux, inverse turbulent cascade,
-  wave tails from the failure of Huygens' principle, and the topological prohibitions.
+- `docs/AXIOMS.md` — the project's axioms in three tiers (geometry and mechanics, fundamental
+  interactions, effective theories), the dimensions of physical quantities in two dimensions, and
+  the consequences already derived from them: no escape velocity, no atmospheric escape, ~105° of
+  apsidal regression per orbit, `T³` emission, `1/r` flux, inverse turbulent cascade, wave tails
+  from the failure of Huygens' principle, and the topological prohibitions.
+- An abstraction ledger recording everything the project posits rather than derives, so a result
+  that reflects a choice can never be mistaken for a finding about two-dimensional physics.
 
 ### Changed
+- Gravity is postulated as a direct attractive force rather than spacetime curvature, because
+  general relativity in 2+1 dimensions has no propagating degrees of freedom and produces no
+  gravitational attraction at all.
+- Electromagnetism is abstracted rather than modelled; light and material response are supplied as
+  effective theories with declared parameters.
+- The project works in natural units rather than SI. A world is characterised by dimensionless
+  ratios, which is the only thing that was ever physically meaningful.
 - The project is now a simulation that derives its own physics. `vellum-monograph.html` is
   reclassified from specification to prior hypothesis, and frozen — no simulation parameter may be
   tuned to reproduce a number in it.
