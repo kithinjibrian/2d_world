@@ -159,6 +159,12 @@ None.
 
 ---
 
+## SESSION 3 — 2026-09-03 — Simulation reframe — open
+
+Branch: setup/context-system
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
