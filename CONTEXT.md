@@ -105,6 +105,60 @@ CLAUDE.md was quoted from the monograph text.
 
 ---
 
+## SESSION 2 — 2026-09-03 — Git identity correction — closed
+
+Branch: setup/context-system
+
+### WHAT WAS DONE
+
+Resolved the authorship item left open at the close of Session 1.
+
+Git had no identity configured on this machine, so Session 1 set one repo-locally as a stopgap and
+flagged it for correction. The user supplied the correct address. The identity is now set globally
+in `~/.gitconfig` as `kithinjibrian <kithinjibrian369@gmail.com>`, and the repo-local override was
+removed so the global value actually applies here rather than being shadowed.
+
+Session 1's two commits were re-authored to match. Both were local and unpushed, so the rewrite was
+safe; the initial commit `d535259` is the user's own and was left untouched. Commit hashes for the
+two session commits changed as a result — `e86d716` → `ad71b42` and `54b08da` → `9e4087d`.
+
+Session 1's entry above still records the old address. That is deliberate: past sessions are
+append-only under the PROTECTED FILES rule in CLAUDE.md, so the record stands as written and this
+entry supersedes it.
+
+### FILES CREATED OR MODIFIED
+
+    CONTEXT.md    — this entry
+    ~/.gitconfig  — global user.name and user.email (outside the repo)
+
+No project file changed. CHANGELOG.md was deliberately not updated: nothing observable shipped, and
+the CHANGELOG rule excludes changes a reader cannot see or feel.
+
+### TESTS WRITTEN
+
+None. Verified directly instead: `git config --get user.email` resolves to the global value with no
+local override, and `git log --format='%an <%ae> | %cn <%ce>'` shows both author and committer
+corrected on both commits.
+
+### DECISIONS MADE
+
+- The identity is global, not repo-local, since the user asked for it to be permanent.
+- Session 1's commits were rewritten rather than left with the wrong author, because they were
+  unpushed and created in this session. Nothing that had left the machine was touched.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** The branch `setup/context-system` is local only. Remote is
+  `git@github.com:kithinjibrian/2d_world.git`.
+- Everything else carried over from Session 1: six open decisions, DECISION-006 the blocking one,
+  and three recorded defects each needing a PRP.
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
@@ -123,3 +177,5 @@ and a slide is the most likely next change.
 Do not open `vellum-monograph.html` for editing until a PRP exists and is approved. When you do,
 read the relevant plate first and quote its numbers exactly; the CANON RULE in CLAUDE.md lists the
 fixed values that must never be contradicted.
+
+The branch has never been pushed. Confirm with the user whether it should be before building on it.
