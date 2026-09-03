@@ -255,6 +255,12 @@ anything is built on it.**
 
 ---
 
+## SESSION 4 — 2026-09-03 — Tiered axioms — open
+
+Branch: setup/context-system
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
