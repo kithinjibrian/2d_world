@@ -1,0 +1,42 @@
+# .llmignore
+# Files and directories the AI must never touch.
+# Keep this in sync with the PROTECTED FILES section in CLAUDE.md.
+
+# Legal text — never edited
+LICENSE
+
+# Repository internals
+.git/
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.production
+
+# Dependency lockfiles — managed by the package manager, not the AI
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Database migration history — order is sacred, never regenerate
+migrations/
+*.migration.ts
+*.migration.js
+
+# Build output — generated, not source
+dist/
+build/
+.next/
+out/
+
+# External guide this system was built from. Superseded by the files it produced.
+# Read for reference; never edit.
+setup.md
+
+# --- Append-only: read freely, add to the end, never rewrite or delete existing entries ---
+# CHANGELOG.md      past entries are never modified
+# CONTEXT.md        past sessions are never deleted
+# reports/          EOD reports are never deleted
+# docs/decisions/   ADRs are never renumbered or removed
+# docs/source/      source notes are superseded with a dated header, never deleted

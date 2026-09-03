@@ -1,0 +1,908 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vellum — A Natural History of the Plane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#E4E8E1;
+  --plate:#EFF2EC;
+  --ink:#1B2621;
+  --ink2:#55635A;
+  --rule:#C0CABB;
+  --teal:#2E6E62;
+  --ox:#7A2E3A;
+  --gold:#9A7B2E;
+  --measure:64ch;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Spectral",Georgia,serif;
+  font-weight:400;
+  font-size:17px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:0 28px 140px}
+
+/* ---- masthead ---- */
+header.mast{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:16px;padding:20px 0 14px;border-bottom:1px solid var(--rule);
+  flex-wrap:wrap;
+}
+.mast .t{font-family:"Fraunces",Georgia,serif;font-weight:500;font-size:15px;letter-spacing:.01em}
+.mast .n{color:var(--ink2);font-size:13px;font-style:italic}
+
+/* ---- slides ---- */
+.slide{display:none;padding:34px 0 0;animation:none}
+.slide.on{display:block}
+@media (prefers-reduced-motion: no-preference){
+  .slide.on{animation:rise .34s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
+
+h1{
+  font-family:"Fraunces",Georgia,serif;font-weight:700;
+  font-size:clamp(40px,8vw,76px);line-height:1.02;letter-spacing:-.02em;
+  margin:0 0 6px;
+}
+h2{
+  font-family:"Fraunces",Georgia,serif;font-weight:500;
+  font-size:clamp(26px,4.4vw,38px);line-height:1.14;letter-spacing:-.012em;
+  margin:0 0 4px;max-width:22ch;
+}
+h3{
+  font-family:"Fraunces",Georgia,serif;font-weight:500;
+  font-size:19px;line-height:1.3;margin:30px 0 6px;
+}
+.dek{font-style:italic;color:var(--ink2);font-size:19px;margin:0 0 26px;max-width:52ch}
+p{margin:0 0 16px;max-width:var(--measure)}
+ul{margin:0 0 16px;padding-left:20px;max-width:var(--measure)}
+li{margin:0 0 7px}
+strong{font-weight:600}
+em.term{font-style:italic;color:var(--teal)}
+
+/* ---- plates ---- */
+figure{
+  margin:26px 0 26px;background:var(--plate);
+  border:1px solid var(--rule);border-radius:2px;padding:16px 16px 10px;
+}
+figure svg{display:block;width:100%;height:auto}
+figcaption{
+  margin-top:10px;padding-top:9px;border-top:1px solid var(--rule);
+  font-size:13.5px;line-height:1.55;color:var(--ink2);
+}
+figcaption b{font-family:"Fraunces",serif;font-weight:500;color:var(--ink);font-size:13px}
+
+/* ---- specimen data block ---- */
+.data{
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);
+  margin:0 0 24px;padding:12px 0 4px;max-width:var(--measure);
+}
+.data div{display:flex;gap:14px;padding:4px 0;border-bottom:1px dotted var(--rule);font-size:14.5px}
+.data div:last-child{border-bottom:0}
+.data dt,.data span.k{
+  font-family:"Fraunces",serif;font-weight:500;font-size:13px;
+  color:var(--ink2);min-width:112px;flex:0 0 112px;line-height:1.75;
+}
+.data span.v{flex:1}
+
+/* ---- contents ---- */
+.toc{columns:2;column-gap:40px;max-width:var(--measure);margin:22px 0 0}
+.toc button{
+  display:block;width:100%;text-align:left;background:none;border:0;
+  padding:5px 0;font:inherit;font-size:15.5px;color:var(--ink);
+  cursor:pointer;border-bottom:1px solid var(--rule);
+  break-inside:avoid;
+}
+.toc button:hover,.toc button:focus-visible{color:var(--teal)}
+.toc .pl{color:var(--ink2);font-size:12px;font-style:italic;margin-right:8px}
+
+/* ---- pull quote ---- */
+blockquote{
+  margin:28px 0;padding:0 0 0 20px;border-left:2px solid var(--teal);
+  font-family:"Fraunces",serif;font-weight:300;font-size:21px;line-height:1.42;
+  max-width:46ch;color:var(--ink);
+}
+
+/* ---- nav ---- */
+nav.bar{
+  position:fixed;left:0;right:0;bottom:0;background:var(--paper);
+  border-top:1px solid var(--rule);padding:10px 28px;
+  display:flex;align-items:center;justify-content:center;gap:18px;
+}
+nav.bar button{
+  font:inherit;font-size:14px;background:none;border:1px solid var(--rule);
+  color:var(--ink);padding:5px 15px;border-radius:2px;cursor:pointer;
+}
+nav.bar button:hover:not(:disabled){border-color:var(--ink);}
+nav.bar button:disabled{opacity:.32;cursor:default}
+nav.bar .pos{font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* ---- svg ink defaults ---- */
+.ink{stroke:#1B2621;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.ink-t{stroke:#1B2621;fill:none;stroke-width:.7;opacity:.55}
+.tealS{stroke:#2E6E62;fill:none;stroke-width:1.3;stroke-linecap:round}
+.oxS{stroke:#7A2E3A;fill:none;stroke-width:1.4;stroke-linecap:round}
+.goldF{fill:#9A7B2E}
+.tealF{fill:#2E6E62;opacity:.16}
+.inkF{fill:#1B2621}
+.softF{fill:#1B2621;opacity:.09}
+text{font-family:"Spectral",Georgia,serif;font-size:12px;fill:#55635A}
+text.lab{font-family:"Fraunces",Georgia,serif;font-size:12.5px;fill:#1B2621}
+
+@media (max-width:620px){
+  body{font-size:16px}
+  .toc{columns:1}
+  .data div{flex-direction:column;gap:0}
+  .data dt,.data span.k{flex:none;min-width:0}
+}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <span class="t">Vellum — A Natural History of the Plane</span>
+  <span class="n" id="mastnum">Frontispiece</span>
+</header>
+
+<!-- 1 ================================================== -->
+<section class="slide on" data-t="Frontispiece">
+  <h1>Vellum</h1>
+  <p class="dek">A natural history of a world with two dimensions, its single star, and the seven surviving kinds of life that hold it.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 330" role="img" aria-label="The star Kell at left and the disc-shaped planet Vellum at right, with its atmospheric ring and a dashed orbital path between them.">
+      <circle cx="112" cy="166" r="30" class="goldF"/>
+      <g class="ink-t">
+        <line x1="112" y1="118" x2="112" y2="100"/><line x1="112" y1="232" x2="112" y2="214"/>
+        <line x1="64" y1="166" x2="46" y2="166"/><line x1="178" y1="166" x2="160" y2="166"/>
+        <line x1="78" y1="132" x2="66" y2="120"/><line x1="146" y1="200" x2="158" y2="212"/>
+        <line x1="146" y1="132" x2="158" y2="120"/><line x1="78" y1="200" x2="66" y2="212"/>
+      </g>
+      <text class="lab" x="112" y="266" text-anchor="middle">Kell</text>
+
+      <path class="ink-t" d="M188 196 C270 262, 350 268, 424 246" stroke-dasharray="5 6"/>
+
+      <circle cx="440" cy="164" r="102" class="ink-t" stroke-dasharray="4 5"/>
+      <circle cx="440" cy="164" r="84" class="tealF" stroke="none"/>
+      <circle cx="440" cy="164" r="84" class="ink"/>
+      <path class="tealS" d="M372 212 A84 84 0 0 0 470 246" stroke-width="3.2" opacity=".8"/>
+      <path class="ink" d="M398 84 l10 -15 8 13 9 -18 7 16"/>
+      <circle cx="500" cy="106" r="9" class="ink"/>
+      <path class="ink" d="M500 115 v9"/>
+      <text class="lab" x="440" y="296" text-anchor="middle">Vellum</text>
+      <text x="440" y="313" text-anchor="middle">surface 38,400 km around · no edge</text>
+    </svg>
+    <figcaption><b>Plate I.</b> Kell and Vellum, to no scale. The dotted ring is the top of the atmosphere; the heavier arc at lower left is the Deepsill Ocean. The small marks on the upper rim are a mountain and a drifting bladder — the two tallest things on the world.</figcaption>
+  </figure>
+
+  <p>Everything in this book follows from one fact. Vellum has length and height, and nothing else. There is no sideways. No creature has ever gone around another; no root has ever spread beneath a rival; no eye has ever been worth the trouble of growing.</p>
+  <p>What follows is arranged as a survey: the sky first, then the ground, then the rules a body must obey here, then the seven kinds of life that obey them.</p>
+
+  <div class="toc" id="toc"></div>
+</section>
+
+<!-- 2 ================================================== -->
+<section class="slide" data-t="The system of Kell">
+  <h2>The system of Kell</h2>
+  <p class="dek">A star that nothing can leave.</p>
+
+  <p>Gravity spreads its influence over a circle here rather than a sphere, so it thins with distance rather than with the square of distance. The consequence is severe and it shapes everything above the atmosphere: <strong>Vellum's system has no escape velocity.</strong> There is no speed at which an object is finally free. Fling a stone hard enough and it will take a hundred thousand years to come back, but it will come back.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 300" role="img" aria-label="A rosette orbit: six overlapping ellipses sharing a common focus at the star, each rotated slightly from the last, tracing a path that never closes.">
+      <g class="ink-t" fill="none">
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(0 300 150)"/>
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(30 300 150)"/>
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(60 300 150)"/>
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(90 300 150)"/>
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(120 300 150)"/>
+        <ellipse cx="416" cy="150" rx="150" ry="95" transform="rotate(150 300 150)"/>
+      </g>
+      <circle cx="300" cy="150" r="13" class="goldF"/>
+      <circle cx="446" cy="66" r="5" class="inkF"/>
+      <text x="300" y="292" text-anchor="middle">Six successive years of one orbit</text>
+    </svg>
+    <figcaption><b>Plate II.</b> Because the force law is not inverse-square, no orbit here returns to where it began. Every path is a rosette that slowly turns. Vellum's year is a fixed length; Vellum's <em>seasons</em> are not.</figcaption>
+  </figure>
+
+  <p>A year on Vellum runs 611 days. But the point of the orbit at which the planet passes closest to Kell creeps forward each circuit, so the warm part of the year arrives a little later every time and works its way round the calendar over roughly nine centuries. There has never been a reason to keep a calendar. Life here keys to the day, to the tide of the storms, and to hunger — never to a season.</p>
+
+  <h3>The consequence nobody survives</h3>
+  <p>Since nothing escapes, nothing is ever swept clean. Every fragment thrown off in every collision since the system formed is still in the system, on some slowly turning rosette, and sooner or later every rosette crosses Vellum's. The planet is struck hard on a cycle of roughly forty million years.</p>
+  <p>This is the metronome of Vellum's biology. Its history is not a slow accumulation but a series of floods and prunings, and every era in Plate IX begins with a sky full of debris and ends the same way.</p>
+</section>
+
+<!-- 3 ================================================== -->
+<section class="slide" data-t="The planet">
+  <h2>The planet</h2>
+  <p class="dek">A closed line, an atmosphere in layers, and no moon.</p>
+
+  <p>Vellum is a disc. Its surface is therefore a <strong>closed curve</strong> — a single continuous line 38,400 kilometres around, with no edge and no far side. Walk far enough in one direction and you arrive behind yourself. This is not a curiosity; it is the reason a barrier here is so serious. A wall across the line does not divide a landscape into two regions. It divides <em class="term">the world</em> into two arcs, and there is no third way round.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 300" role="img" aria-label="A curved section of Vellum's surface showing the ocean, a mountain, and three stacked layers of atmosphere above it, each with a wind arrow, and a drifting bladder between layers.">
+      <path class="ink-t" d="M20 118 Q300 40 580 118" stroke-dasharray="4 5"/>
+      <path class="ink-t" d="M20 152 Q300 74 580 152" stroke-dasharray="4 5"/>
+      <path class="ink-t" d="M20 186 Q300 108 580 186" stroke-dasharray="4 5"/>
+
+      <path class="tealS" d="M96 122 l30 0" stroke-width="1.6" marker-end="url(#ar)"/>
+      <path class="tealS" d="M504 158 l-30 0" stroke-width="1.6" marker-end="url(#ar)"/>
+      <path class="tealS" d="M110 192 l30 0" stroke-width="1.6" marker-end="url(#ar)"/>
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round"/></marker></defs>
+
+      <ellipse cx="330" cy="120" rx="15" ry="24" fill="#2E6E62" opacity=".2"/>
+      <ellipse cx="330" cy="120" rx="15" ry="24" class="tealS"/>
+      <path class="ink-t" d="M330 144 v16 M324 148 v14 M336 148 v14"/>
+
+      <path class="ink" d="M20 246 Q160 208 232 214 L280 168 L330 214 Q430 224 470 244 L520 254 Q556 250 580 254"/>
+      <path class="tealS" d="M470 244 Q500 268 520 254" stroke-width="3" opacity=".85"/>
+      <text x="300" y="288" text-anchor="middle">Wind reverses with height. This is the only steering a bladder has.</text>
+    </svg>
+    <figcaption><b>Plate III.</b> A short arc of the surface, exaggerated. The atmosphere separates into stable layers whose winds run counter to one another — a consequence of the way turbulence here feeds energy upward into ever-larger eddies rather than dissipating it.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Day</span><span class="v">19.4 hours</span></div>
+    <div><span class="k">Year</span><span class="v">611 days, seasons precessing over ~900 years</span></div>
+    <div><span class="k">Surface</span><span class="v">38,400 km, closed, no edge</span></div>
+    <div><span class="k">Satellites</span><span class="v">None. Debris, permanently</span></div>
+    <div><span class="k">Ocean</span><span class="v">One continuous band, the Deepsill, plus sealed inland basins</span></div>
+  </div>
+
+  <h3>Storms that outlive the things that live in them</h3>
+  <p>In an atmosphere of two dimensions, turbulence runs backwards from what one might expect. Small eddies merge into larger ones instead of shredding into heat. The result is that Vellum's weather consolidates: a handful of vast rotating systems, each thousands of kilometres across, persisting for centuries. Sailors would have named them. Instead the Driftbladders navigate by them, and a bladder born inside a storm will very likely die inside the same one.</p>
+</section>
+
+<!-- 4 ================================================== -->
+<section class="slide" data-t="Three laws of the plane">
+  <h2>Three laws of the plane</h2>
+  <p class="dek">Nearly everything else in this book is a consequence of these.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 250" role="img" aria-label="Three panels. First, four animals on a line with a crossed-out swap arrow. Second, a plant casting a shadow that blocks all light beneath it. Third, stacked layers of air with alternating wind directions.">
+      <line x1="14" y1="184" x2="196" y2="184" class="ink-t"/>
+      <ellipse cx="52" cy="174" rx="17" ry="9" class="softF" stroke="none"/><ellipse cx="52" cy="174" rx="17" ry="9" class="ink"/>
+      <ellipse cx="100" cy="174" rx="17" ry="9" class="ink"/>
+      <ellipse cx="148" cy="174" rx="17" ry="9" class="ink"/>
+      <path class="oxS" d="M76 148 C86 130, 114 130, 124 148" stroke-dasharray="4 4"/>
+      <line x1="94" y1="132" x2="106" y2="144" class="oxS" stroke-width="2"/>
+      <line x1="106" y1="132" x2="94" y2="144" class="oxS" stroke-width="2"/>
+      <text class="lab" x="100" y="216" text-anchor="middle">1 · Nothing passes</text>
+      <text x="100" y="234" text-anchor="middle">on the ground</text>
+
+      <line x1="212" y1="184" x2="394" y2="184" class="ink-t"/>
+      <circle cx="303" cy="62" r="10" class="goldF"/>
+      <g class="ink-t"><line x1="282" y1="80" x2="272" y2="110"/><line x1="303" y1="80" x2="303" y2="110"/><line x1="324" y1="80" x2="334" y2="110"/></g>
+      <path class="ink" d="M282 140 q21 -22 42 0"/>
+      <rect x="282" y="146" width="42" height="38" class="softF" stroke="none"/>
+      <path class="ink-t" d="M282 146 v38 M324 146 v38"/>
+      <text class="lab" x="303" y="216" text-anchor="middle">2 · Shadow is total</text>
+      <text x="303" y="234" text-anchor="middle">the tallest takes all light</text>
+
+      <line x1="424" y1="72" x2="560" y2="72" class="tealS" marker-end="url(#ar2)"/>
+      <line x1="560" y1="118" x2="424" y2="118" class="tealS" marker-end="url(#ar2)"/>
+      <line x1="424" y1="164" x2="560" y2="164" class="tealS" marker-end="url(#ar2)"/>
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round"/></marker></defs>
+      <line x1="410" y1="160" x2="410" y2="80" class="ink-t" stroke-dasharray="4 4"/>
+      <line x1="406" y1="86" x2="410" y2="78" class="ink-t"/><line x1="414" y1="86" x2="410" y2="78" class="ink-t"/>
+      <text class="lab" x="492" y="216" text-anchor="middle">3 · Wind sorts by height</text>
+      <text x="492" y="234" text-anchor="middle">altitude is navigation</text>
+    </svg>
+    <figcaption><b>Plate IV.</b> The three constraints. Every body plan, every hunting strategy and every migration in this book is an answer to one of them.</figcaption>
+  </figure>
+
+  <h3>The first law and its three loopholes</h3>
+  <p>Two animals standing on the ground are in a fixed order, and that order holds until one of them dies. It is impossible to overstate how much of Vellum's ecology this single fact produces: the pincer hunt, the impassable armoured grazer, the unavoidable trap, populations that speciate simply because a mountain stands between them.</p>
+  <p>Three lineages found a way round it, and each pays differently. <strong>Skimmers go over</strong>, and pay in energy. <strong>Springhoppers go over briefly</strong>, and pay by announcing their landing point the instant they leave the ground. <strong>Ridgeworms go under</strong>, and pay in speed and in the visible furrow they leave behind. Nothing else in the world can get past anything.</p>
+
+  <blockquote>A wall on Vellum is not an obstacle. It is a border, and the two sides of it become two worlds within a hundred thousand years.</blockquote>
+</section>
+
+<!-- 5 ================================================== -->
+<section class="slide" data-t="Water">
+  <h2>Water</h2>
+  <p class="dek">Rivers that cannot branch, and lakes that are islands.</p>
+
+  <p>Water runs downhill along the surface line, and that is all it can do. A tributary would have to arrive from the side, and there is no side. Vellum therefore has no river networks, no confluences and no deltas — only single unbranched runs of water descending from high ground into whatever basin lies below.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 270" role="img" aria-label="A basin holding water. Fish swim in the upper layer. The lowest layer is shaded to show stagnant, oxygen-poor water. A dashed arrow at the right shows the single outlet over the basin lip.">
+      <path d="M182 108 L444 108 L390 200 L232 200 Z" fill="#2E6E62" opacity=".17"/>
+      <path d="M214 168 L410 168 L390 200 L232 200 Z" fill="#1B2621" opacity=".18"/>
+      <line x1="182" y1="108" x2="444" y2="108" class="tealS"/>
+      <path class="ink" d="M20 66 L150 66 L232 200 L390 200 L456 96 L580 96"/>
+      <path class="tealS" d="M92 66 L150 66 L214 132" stroke-width="2.6" opacity=".8"/>
+
+      <ellipse cx="270" cy="134" rx="14" ry="7" class="ink"/><path class="ink" d="M256 134 l-13 -6 v12 z"/>
+      <ellipse cx="352" cy="148" rx="14" ry="7" class="ink"/><path class="ink" d="M366 148 l13 -6 v12 z"/>
+
+      <path class="oxS" d="M452 98 l40 -26" stroke-dasharray="5 4" marker-end="url(#ar3)"/>
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round"/></marker></defs>
+      <text x="520" y="62" text-anchor="middle">the only way out</text>
+      <text x="300" y="240" text-anchor="middle">Stagnant floor · no vertical mixing</text>
+    </svg>
+    <figcaption><b>Plate V.</b> A typical inland basin. Water enters at one point and leaves, if at all, over the lower lip. The dark band is the anoxic floor, present in every basin on Vellum deeper than about forty metres.</figcaption>
+  </figure>
+
+  <p>The same reversed turbulence that consolidates the storms also refuses to stir a lake. Energy will not travel down into small eddies, so deep water never turns over. Below a certain depth every basin is dead, and the living part of a lake is a band near the surface — wide, but thin.</p>
+  <p>And a fish cannot leave. There is no flood route, no drainage web, no chance passage from one basin to another. A population washed into a basin is sealed there for the rest of its existence. This is why the Sillfish of Plate XIII is not one animal but eleven hundred of them, each confined to a single body of water, most differing from their nearest relatives by traits no one else will ever see.</p>
+</section>
+
+<!-- 6 ================================================== -->
+<section class="slide" data-t="What a body may be">
+  <h2>What a body may be</h2>
+  <p class="dek">Four things anatomy cannot do here, and the workarounds every animal shares.</p>
+
+  <p>In two dimensions, any closed ring of tissue severs whatever lies inside it from everything outside. There is no route over or under a loop. This single topological fact rules out most of the organs found in a three-dimensional animal, and every creature in this book carries the same set of compromises because there were no others available.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 250" role="img" aria-label="Left, a body with a gut running from mouth to vent, which severs the body into an upper and a lower half; marked with a cross. Right, a body with a single opening and a blind branching gut, which remains connected; marked as viable.">
+      <path d="M56 82 Q140 60 224 84 L224 84 Q250 96 250 112 L84 112 Q60 104 56 82 Z" fill="#7A2E3A" opacity=".13"/>
+      <path d="M56 148 Q140 172 224 146 Q250 136 250 118 L84 118 Q60 128 56 148 Z" fill="#7A2E3A" opacity=".13"/>
+      <path class="ink" d="M56 82 Q140 58 226 84 Q252 96 252 115 Q252 134 226 146 Q140 172 56 148"/>
+      <path class="ink" d="M56 82 Q40 115 56 148"/>
+      <path class="ink-t" d="M50 112 L252 112 M50 118 L252 118" stroke-width="1.1" opacity=".9"/>
+      <line x1="140" y1="188" x2="160" y2="208" class="oxS" stroke-width="2.4"/>
+      <line x1="160" y1="188" x2="140" y2="208" class="oxS" stroke-width="2.4"/>
+      <text class="lab" x="152" y="60" text-anchor="middle">A gut through the body</text>
+      <text x="152" y="236" text-anchor="middle">severs it into two halves</text>
+
+      <path d="M348 82 Q432 58 518 84 Q544 96 544 115 Q544 134 518 146 Q432 172 348 148 Q332 115 348 82 Z" fill="#2E6E62" opacity=".13"/>
+      <path class="ink" d="M348 82 Q432 58 518 84 Q544 96 544 115 Q544 134 518 146 Q432 172 348 148 Q332 115 348 82 Z"/>
+      <path class="ink-t" d="M348 108 L420 108 Q460 108 470 92 M420 108 Q460 108 470 126 M348 122 L400 122 Q436 122 444 138" stroke-width="1.1" opacity=".9"/>
+      <circle cx="344" cy="115" r="7" class="ink"/>
+      <text class="lab" x="446" y="60" text-anchor="middle">One opening, blind branches</text>
+      <text x="446" y="236" text-anchor="middle">the only workable plan</text>
+    </svg>
+    <figcaption><b>Plate VI.</b> The defining compromise of Vellum anatomy. No animal here has a vent. Food goes in and waste comes out through the same aperture, and no animal can feed while it is digesting.</figcaption>
+  </figure>
+
+  <h3>The four prohibitions</h3>
+  <ul>
+    <li><strong>No through-gut.</strong> Every animal eats in batches: swallow, seal, digest, purge. This alone rules out the continuous soil-processing detritivores that dominate ground ecology elsewhere.</li>
+    <li><strong>No closed circulation.</strong> A circuit of vessels would isolate everything it encircled. Blood moves through blind branching trees, driven by peristalsis, and returns the way it came.</li>
+    <li><strong>No focusing eye.</strong> A lens across a pupil closes the ring and cuts the retina off from the body entirely. Vision was stranded at the open-pit stage and abandoned. See Plate VII.</li>
+    <li><strong>No wheel, no axle, no rotating joint.</strong> A hub inside a housing cannot be connected to anything. Every mechanism on Vellum oscillates.</li>
+  </ul>
+
+  <p>A fifth prohibition applies to engineering rather than anatomy, and it is the reason no burrowing lineage here ever built a colony: a tunnel's roof is a beam, and a beam can only span so far, but <strong>a support pillar would seal the tunnel in two</strong>. There is no way to prop a long tunnel open. Vellum has burrows. It has never had a warren.</p>
+</section>
+
+<!-- 7 ================================================== -->
+<section class="slide" data-t="Senses">
+  <h2>Senses</h2>
+  <p class="dek">A world of sound, and one blind spot everything shares.</p>
+
+  <p>No animal on Vellum can see. Three separate barriers stopped vision before it started: an aperture here is a line rather than a disc, so an eye gathers almost no light; a lens cannot be sealed into place without severing the retina; and in two dimensions a sharp flash does not stay sharp — waves develop a trailing echo as they travel, so every image would arrive smeared by its own afterglow. Vision was never worth the tissue.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 250" role="img" aria-label="Left, an animal on the ground line with vibration travelling outward in both directions with almost no loss. Right, a flying animal emitting an echolocation call that spreads through the air and returns.">
+      <line x1="14" y1="150" x2="280" y2="150" class="ink-t"/>
+      <ellipse cx="148" cy="140" rx="20" ry="10" class="ink"/>
+      <g class="tealS" opacity=".85">
+        <path d="M120 158 q-10 8 -20 0"/><path d="M96 158 q-10 8 -20 0"/><path d="M72 158 q-10 8 -20 0"/><path d="M48 158 q-10 8 -20 0"/>
+        <path d="M176 158 q10 8 20 0"/><path d="M200 158 q10 8 20 0"/><path d="M224 158 q10 8 20 0"/><path d="M248 158 q10 8 20 0"/>
+      </g>
+      <text class="lab" x="148" y="196" text-anchor="middle">Ground vibration</text>
+      <text x="148" y="214" text-anchor="middle">barely fades; direction is one bit</text>
+
+      <ellipse cx="376" cy="96" rx="26" ry="12" class="ink"/>
+      <path class="ink" d="M402 96 l22 -8 -3 17 z"/>
+      <g class="tealS" opacity=".7" fill="none">
+        <path d="M356 110 A34 34 0 0 0 356 148"/>
+        <path d="M348 104 A52 52 0 0 0 348 162"/>
+        <path d="M340 98 A70 70 0 0 0 340 176"/>
+      </g>
+      <ellipse cx="292" cy="176" rx="13" ry="7" class="softF" stroke="none"/>
+      <ellipse cx="292" cy="176" rx="13" ry="7" class="ink-t"/>
+      <text class="lab" x="452" y="196" text-anchor="middle">Echolocation</text>
+      <text x="452" y="214" text-anchor="middle">carries far, returns with a long tail</text>
+    </svg>
+    <figcaption><b>Plate VII.</b> The two working senses. Sound in a plane loses only half as much strength with distance as it would elsewhere, so calls travel remarkably far — but every call comes back with a decaying tail behind it, and no animal here has ever heard a clean echo.</figcaption>
+  </figure>
+
+  <p>Ground vibration is the finer instrument. A seismic pulse travelling along a line has nowhere to spread, so it fades only by friction. A Ridgeworm can feel a Springhopper land four kilometres away. What it cannot do is tell it anything except <em class="term">left</em> or <em class="term">right</em> — but on a one-dimensional surface that is the complete answer, and the timing gives the distance.</p>
+  <p>What survives of light-sensitivity is not vision but a patch: a few cells reporting brightness and nothing more. It is enough to find the sun, enough to know depth in water, and — because a shadow here is absolute — enough to feel the instant something passes overhead. That single patch is the only warning a ground animal ever gets of a Skimmer diving on it.</p>
+
+  <h3>What a blind world sounds like</h3>
+  <p>Everything that colour does elsewhere, sound does here. There is no camouflage on Vellum, no warning stripe, no display plumage, no flower. Courtship is song. Territory is a drumbeat held against a rival's. Mimicry is acoustic: the small and harmless Ridgeworm of the eastern arc produces, when alarmed, a passable imitation of a Furrowsnake's approach. The world is drab and extremely loud.</p>
+</section>
+
+<!-- 8 ================================================== -->
+<section class="slide" data-t="Ways of moving">
+  <h2>Ways of moving</h2>
+  <p class="dek">Five gaits, one of which had to be invented twice.</p>
+
+  <p>Rotation is unavailable, so everything that moves on Vellum does so by oscillating. The ancestral motion is a travelling wave passed down the body — peristalsis in soil, undulation in water, and, with the addition of a stiffened blade at the rear, flight. All three are the same nervous pattern running in different media, which is why the Skimmer and the Sillfish are closer cousins than either looks.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 260" role="img" aria-label="Three ways past an obstruction. A skimmer flies over the top, a springhopper arcs over in a single leap, and a ridgeworm passes underneath through shallow soil, raising a ridge on the surface.">
+      <path class="ink-t" d="M40 62 Q300 26 560 62" stroke-dasharray="5 5"/>
+      <ellipse cx="300" cy="44" rx="22" ry="9" class="ink"/><path class="ink" d="M322 44 l20 -7 -3 15 z"/>
+      <text x="576" y="66" text-anchor="end">over, at cost</text>
+
+      <path class="ink-t" d="M130 168 Q300 88 470 168" stroke-dasharray="5 5"/>
+      <ellipse cx="300" cy="116" rx="17" ry="8" class="ink"/>
+      <path class="ink" d="M292 124 v12 M308 124 v12"/>
+      <text x="576" y="140" text-anchor="end">over, committed</text>
+
+      <rect x="264" y="168" width="60" height="52" class="softF" stroke="none"/>
+      <path class="ink" d="M264 168 h60 v52 h-60 z"/>
+      <line x1="20" y1="220" x2="264" y2="220" class="ink"/>
+      <line x1="324" y1="220" x2="580" y2="220" class="ink"/>
+
+      <path class="ink" d="M120 220 q22 -12 44 0"/>
+      <ellipse cx="142" cy="236" rx="20" ry="7" class="ink-t"/>
+      <text x="576" y="252" text-anchor="end">under, slowly</text>
+    </svg>
+    <figcaption><b>Plate VIII.</b> The three exemptions from the first law, and the armoured obstruction that makes them necessary. The raised ground above the worm is unavoidable: displaced soil has nowhere to go but up, which is why no burrower on Vellum has ever been able to travel unnoticed.</figcaption>
+  </figure>
+
+  <h3>The hop</h3>
+  <p>Springhoppers stand on two legs, one fore and one aft — never abreast, since there is no abreast. Both legs fire together and the launch is aimed not by turning the body but by pushing harder with one than the other. The animal is symmetrical end to end and never needs to turn round, which matters more than it sounds: pitching a body through half a circle takes two seconds here, and two seconds is usually the whole hunt.</p>
+
+  <h3>The float</h3>
+  <p>The last gait is not a gait at all. A Driftbladder holds a bag of hydrogen and squeezes it, and the change in displaced air lifts or drops it. Every journey it ever makes is made by choosing a wind. It has no propulsive organ of any kind.</p>
+</section>
+
+<!-- 9 ================================================== -->
+<section class="slide" data-t="Deep time">
+  <h2>Deep time</h2>
+  <p class="dek">Six eras, each opened and closed by the sky.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 250" role="img" aria-label="A timeline of six eras from the origin of life to the present, with impact events marked between them.">
+      <line x1="30" y1="120" x2="570" y2="120" class="ink"/>
+      <g class="ink-t">
+        <line x1="30" y1="112" x2="30" y2="128"/><line x1="120" y1="112" x2="120" y2="128"/>
+        <line x1="216" y1="112" x2="216" y2="128"/><line x1="312" y1="112" x2="312" y2="128"/>
+        <line x1="396" y1="112" x2="396" y2="128"/><line x1="486" y1="112" x2="486" y2="128"/>
+        <line x1="570" y1="112" x2="570" y2="128"/>
+      </g>
+      <g class="oxS" opacity=".75">
+        <line x1="120" y1="98" x2="120" y2="82"/><line x1="216" y1="98" x2="216" y2="82"/>
+        <line x1="312" y1="98" x2="312" y2="82"/><line x1="396" y1="98" x2="396" y2="82"/>
+        <line x1="486" y1="98" x2="486" y2="82"/>
+      </g>
+      <text x="303" y="66" text-anchor="middle">impacts</text>
+      <text class="lab" x="75" y="150" text-anchor="middle">Warm Line</text>
+      <text class="lab" x="168" y="150" text-anchor="middle">One Mouth</text>
+      <text class="lab" x="264" y="150" text-anchor="middle">The Ridge</text>
+      <text class="lab" x="354" y="150" text-anchor="middle">Long Queue</text>
+      <text class="lab" x="441" y="150" text-anchor="middle">The Ascent</text>
+      <text class="lab" x="528" y="150" text-anchor="middle">The Curtain</text>
+      <text x="75" y="170" text-anchor="middle">3.9 Ga</text>
+      <text x="168" y="170" text-anchor="middle">2.1 Ga</text>
+      <text x="264" y="170" text-anchor="middle">870 Ma</text>
+      <text x="354" y="170" text-anchor="middle">410 Ma</text>
+      <text x="441" y="170" text-anchor="middle">180 Ma</text>
+      <text x="528" y="170" text-anchor="middle">26 Ma</text>
+    </svg>
+    <figcaption><b>Plate IX.</b> Vellum's biological history, with the five great bombardments that separate its eras. The intervals are not random; they follow the slow turning of the debris rosettes described in Plate II.</figcaption>
+  </figure>
+
+  <h3>The Warm Line</h3>
+  <p>Life begins in the Deepsill, in the thin band of water that is neither frozen at the surface nor stagnant below. It stays there for nearly two billion years, because the first great problem is not competition but plumbing.</p>
+
+  <h3>The One Mouth</h3>
+  <p>Every early lineage that tried to run a channel through itself split itself in half and died. The survivors of that long failure are the ancestors of everything alive: single-apertured animals with blind branching guts and blind branching blood. It is the most consequential event in Vellum's history and it left no fossils worth the name.</p>
+
+  <h3>The Ridge</h3>
+  <p>The first colonists of the surface are burrowers, arriving not by walking out of the sea but by tunnelling along the wet margin until they were, without noticing, ashore. The Ridgeworm is barely changed from them.</p>
+
+  <h3>The Long Queue</h3>
+  <p>The surface fills, and the first law begins to bite. Within forty million years the ground fauna has sorted itself into the pattern it still holds: a very few enormous armoured grazers that nothing can pass or kill, and a great many small things living in the gaps between them. Mid-sized ground carnivores appear four separate times and fail four separate times. There is simply no way to catch anything on a line that can also outrun you.</p>
+
+  <h3>The Ascent</h3>
+  <p>A basin fish with an unusually large swim bladder washes over a sill, survives, and its descendants discover that the same organ works in air. Flight is easy on Vellum — a wing has no tips, so it loses nothing at its edges — and within a few million years the sky holds more biomass than the ground. Both the Skimmers and the Driftbladders descend from that one stranded fish.</p>
+
+  <h3>The Curtain</h3>
+  <p>The most recent era begins when a Driftbladder lineage stops chasing and starts hanging. The tendril curtain closes the airspace absolutely; more importantly the bladders spread photosynthetic membrane and take the sunlight before it ever reaches the ground. Every tall plant on Vellum died in the eleven million years that followed. The ground flora that survived is the low mat we have now, and the sky is where the world's energy is captured.</p>
+</section>
+
+<!-- 10 ================================================== -->
+<section class="slide" data-t="Spreadturf">
+  <h2>Spreadturf</h2>
+  <p class="dek">The mat. Not a plant so much as a surface condition.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" role="img" aria-label="A low mat of vegetation growing along the ground line, with short forked fronds and shallow anchoring threads below the surface.">
+      <line x1="20" y1="140" x2="580" y2="140" class="ink"/>
+      <g class="tealS">
+        <path d="M60 140 v-22 M60 126 l-9 -12 M60 126 l9 -12"/>
+        <path d="M104 140 v-30 M104 118 l-10 -13 M104 118 l10 -13"/>
+        <path d="M148 140 v-20 M148 128 l-8 -11 M148 128 l8 -11"/>
+        <path d="M196 140 v-28 M196 120 l-10 -12 M196 120 l10 -12"/>
+        <path d="M244 140 v-18 M244 128 l-8 -10 M244 128 l8 -10"/>
+        <path d="M292 140 v-31 M292 118 l-10 -13 M292 118 l10 -13"/>
+        <path d="M340 140 v-22 M340 126 l-9 -12 M340 126 l9 -12"/>
+        <path d="M388 140 v-27 M388 120 l-9 -12 M388 120 l9 -12"/>
+        <path d="M436 140 v-19 M436 128 l-8 -10 M436 128 l8 -10"/>
+        <path d="M484 140 v-29 M484 119 l-10 -12 M484 119 l10 -12"/>
+        <path d="M532 140 v-21 M532 127 l-9 -11 M532 127 l9 -11"/>
+      </g>
+      <g class="ink-t">
+        <path d="M60 140 q-14 12 -30 14 M60 140 q14 12 30 14"/>
+        <path d="M196 140 q-16 14 -34 16 M196 140 q16 14 34 16"/>
+        <path d="M340 140 q-16 14 -34 16 M340 140 q16 14 34 16"/>
+        <path d="M484 140 q-16 14 -34 16 M484 140 q16 14 34 16"/>
+      </g>
+      <text x="300" y="196" text-anchor="middle">Maximum height 31 cm, everywhere on Vellum, without exception</text>
+    </svg>
+    <figcaption><b>Plate X.</b> Spreadturf in section. The forked frond is the whole plant; the threads below anchor it and take up water but cannot spread far, since a root here can only go along or down.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Height</span><span class="v">14–31 cm</span></div>
+    <div><span class="k">Range</span><span class="v">Continuous; the entire habitable surface</span></div>
+    <div><span class="k">Reproduction</span><span class="v">Spores carried by wind; no flower, no pollinator</span></div>
+    <div><span class="k">Eaten by</span><span class="v">Ridgeworm, and the great grazers</span></div>
+  </div>
+
+  <p>Spreadturf is not a species but a habit — several hundred forms so similar that no distinction has ever been drawn. Every one of them is short, and the reason is structural. A stem here is a flat strip. It has no tube, no triangulated core, nothing to resist bending, so its stiffness rises far more slowly with height than its weight does. A Spreadturf that reached a metre would buckle under itself and snap in the first storm to cross it.</p>
+  <p>This is fortunate, and not only for the animals. A plant that could grow tall on Vellum would cast a total shadow on everything behind it, and light competition here has no second place. The forests that once existed, in the age before the Driftbladders, were not forests at all — they were single enormous stalks standing kilometres apart, each in the centre of a dead zone of its own making.</p>
+  <p>What ended them was not the animals. It was the canopy that formed above them, which took the light first.</p>
+</section>
+
+<!-- 11 ================================================== -->
+<section class="slide" data-t="Ridgeworm">
+  <h2>Ridgeworm</h2>
+  <p class="dek">The oldest body plan still in use, and the only thing that goes under.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" role="img" aria-label="A segmented worm just beneath the ground surface, with the soil above it raised into a visible ridge, and bristles gripping the soil along its length.">
+      <path class="ink" d="M20 96 L146 96 Q214 60 282 96 L580 96"/>
+      <path class="ink-t" d="M20 96 L20 190 L580 190 L580 96" opacity=".35"/>
+      <rect x="20" y="96" width="560" height="94" fill="#1B2621" opacity=".05"/>
+      <path class="ink" d="M164 130 q18 -18 40 -14 q22 4 34 -6 q14 -12 34 6 q16 16 34 12"/>
+      <path class="ink" d="M164 152 q18 -18 40 -14 q22 4 34 -6 q14 -12 34 6 q16 16 34 12"/>
+      <path class="ink" d="M164 130 q-10 12 0 22"/>
+      <path class="ink" d="M306 142 q10 -6 12 0 q-4 8 -12 6"/>
+      <g class="ink-t">
+        <path d="M180 152 l-6 8 M204 148 l-4 9 M228 144 l-3 9 M252 146 l-3 9 M276 152 l-4 9 M296 154 l-4 8"/>
+      </g>
+      <circle cx="168" cy="141" r="3" class="inkF"/>
+      <text x="380" y="140" text-anchor="middle">the furrow above is unavoidable</text>
+      <path class="ink-t" d="M370 130 Q330 106 262 84" stroke-dasharray="4 4"/>
+    </svg>
+    <figcaption><b>Plate XI.</b> A Ridgeworm in shallow soil. Bristles along the flank anchor the body while the head extends; the wave then passes rearward. Depth rarely exceeds one metre — every centimetre downward means lifting the entire column of soil above.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Length</span><span class="v">6–40 cm</span></div>
+    <div><span class="k">Medium</span><span class="v">Soil, to about 1 m depth</span></div>
+    <div><span class="k">Senses</span><span class="v">Ground vibration only</span></div>
+    <div><span class="k">Diet</span><span class="v">Spreadturf roots, carrion, small prey — swallowed whole</span></div>
+    <div><span class="k">Eaten by</span><span class="v">Furrowsnake, Springhopper</span></div>
+  </div>
+
+  <p>The Ridgeworm is very nearly unchanged from the animals that first came ashore. It moves by the ancestral wave — anchor the rear, extend, anchor the front, contract — and it is the last common gait on Vellum that requires no limb, no blade and no bag.</p>
+  <p>It cannot, however, eat its way through soil the way a burrower elsewhere might. With a single aperture doing both jobs it must swallow discrete items, seal, and digest before it can feed again. So it does not process the ground; it wedges through it, hunting by the vibration of things moving above, and surfacing to take them.</p>
+  <p>Its burrowing leaves a raised furrow along the surface that persists for days. This is the Ridgeworm's one great vulnerability and the reason Furrowsnakes exist at all: a hunter that can read the ridge knows precisely where its prey is, how deep, and how long ago it passed.</p>
+</section>
+
+<!-- 12 ================================================== -->
+<section class="slide" data-t="Furrowsnake">
+  <h2>Furrowsnake</h2>
+  <p class="dek">The only successful ground carnivore, and it succeeds by not staying on the ground.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" role="img" aria-label="A long undulating predator on the ground surface, its head lowered into a worm furrow, its body running in waves along the line.">
+      <line x1="20" y1="132" x2="580" y2="132" class="ink"/>
+      <path class="ink" d="M540 122 q-26 -20 -54 0 q-28 20 -56 0 q-28 -20 -56 0 q-28 20 -56 0 q-28 -20 -56 0 q-28 20 -56 0 q-24 -16 -44 -2"/>
+      <path class="ink" d="M540 132 q-26 -20 -54 0 q-28 20 -56 0 q-28 -20 -56 0 q-28 20 -56 0 q-28 -20 -56 0 q-28 20 -56 0 q-24 -16 -44 -2"/>
+      <path class="ink" d="M540 122 q14 5 14 5 q0 0 -14 5"/>
+      <path class="ink" d="M162 120 q-14 12 -22 24 q-6 10 2 16"/>
+      <path class="ink-t" d="M120 132 q22 -14 44 -2" />
+      <ellipse cx="142" cy="164" rx="26" ry="9" class="ink-t"/>
+      <circle cx="145" cy="159" r="3" class="inkF"/>
+      <text x="380" y="192" text-anchor="middle">head lowered into a Ridgeworm furrow</text>
+      <path class="ink-t" d="M300 180 Q220 176 168 166" stroke-dasharray="4 4"/>
+    </svg>
+    <figcaption><b>Plate XII.</b> A Furrowsnake taking a Ridgeworm. The body is the same travelling wave as the worm's, run at four times the frequency; the head is narrow enough to enter a furrow that the rest of the animal could never fit through.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Length</span><span class="v">1.4–3.1 m</span></div>
+    <div><span class="k">Senses</span><span class="v">Ground vibration, exceptionally acute</span></div>
+    <div><span class="k">Diet</span><span class="v">Ridgeworms, fallen Springhoppers, carrion</span></div>
+    <div><span class="k">Hunting</span><span class="v">Furrow-reading; pincer, in pairs</span></div>
+  </div>
+
+  <p>Four times in Vellum's history a mid-sized ground carnivore has evolved and four times it has starved. The arithmetic is unforgiving: on a line there is no ambush from an unexpected angle, no stealth, no cutting off an escape. Prey knows exactly where you are from your footfalls, and a chase reduces to whichever animal is faster. If the hunter is faster it exterminates its prey; if it is not, it never eats.</p>
+  <p>The Furrowsnake solves this by hunting something that cannot run: an animal already committed to a tunnel, whose position is advertised on the surface for days afterward. It does not chase. It reads.</p>
+  <p>It also hunts in pairs, and the pair does not need to coordinate. Two Furrowsnakes approaching from opposite directions have already won — there is no third direction. The difficulty is entirely in getting to opposite sides, which is why a hunting pair may travel apart for a week before converging on a stretch of ground between them.</p>
+</section>
+
+<!-- 13 ================================================== -->
+<section class="slide" data-t="Sillfish">
+  <h2>Sillfish</h2>
+  <p class="dek">Eleven hundred species, none of which have ever met.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" role="img" aria-label="A fish with a lens-shaped body and a horizontal tail blade that beats up and down, shown with the blade at the top and bottom of its stroke.">
+      <path class="ink" d="M180 110 Q244 74 330 100 Q368 112 368 122 Q368 132 330 144 Q244 170 180 134 Q158 122 180 110 Z"/>
+      <path d="M180 110 Q244 74 330 100 Q368 112 368 122 Q368 132 330 144 Q244 170 180 134 Q158 122 180 110 Z" fill="#2E6E62" opacity=".12"/>
+      <circle cx="204" cy="116" r="3.5" class="inkF"/>
+      <path class="ink" d="M368 118 L438 92 L444 100 L372 128 Z"/>
+      <path class="ink-t" d="M368 126 L438 156 L444 148 L372 118 Z" stroke-dasharray="3 3"/>
+      <path class="ink" d="M262 96 q10 -14 22 -2"/>
+      <g class="tealS" opacity=".6">
+        <path d="M452 88 q14 -8 26 -2"/><path d="M452 158 q14 8 26 2"/>
+      </g>
+      <text x="300" y="196" text-anchor="middle">the blade beats up and down — never side to side</text>
+    </svg>
+    <figcaption><b>Plate XIII.</b> A generalised Sillfish. The tail is a horizontal blade, not a vertical fan; there being no lateral direction, all swimming here is done in the vertical plane, as a whale's is. The dashed outline shows the upstroke.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Length</span><span class="v">3 cm to 2.2 m by basin</span></div>
+    <div><span class="k">Medium</span><span class="v">The upper band of any standing water</span></div>
+    <div><span class="k">Breathing</span><span class="v">External gill fringes; no enclosed chamber is possible</span></div>
+    <div><span class="k">Buoyancy</span><span class="v">Swim bladder — the organ that later reached the sky</span></div>
+  </div>
+
+  <p>Water restores what the ground took away. A basin is a genuine two-dimensional region, so a Sillfish can pass another, circle it, rise above it, dive beneath it. All the manoeuvring that ground animals have never possessed is ordinary here, and the fins that would elsewhere control roll and yaw are simply absent — there is no roll and no yaw to control. A Sillfish has a body, a blade, and one small trim surface.</p>
+  <p>But a basin is also a prison. There is no drainage network on Vellum, no flood connection, no route between one body of water and the next except a one-way spill over the lip. Every basin has been sealed since it filled, and every population inside has been evolving alone for as long as it has existed. The catalogue currently stands at eleven hundred and six species. Most are separated from their nearest relative by a ridge of dry ground a few hundred metres wide, and none has ever crossed it.</p>
+  <p>One did, once. Its descendants are on Plates XIV, XV and XVI.</p>
+</section>
+
+<!-- 14 ================================================== -->
+<section class="slide" data-t="Skimmer">
+  <h2>Skimmer</h2>
+  <p class="dek">The whole animal is the wing.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 230" role="img" aria-label="A flier shaped as a single cambered airfoil, cruising just above the ground line, with streamlines compressed over its upper surface and spread below.">
+      <g class="tealS" opacity=".5">
+        <path d="M40 60 C180 52, 320 48, 560 60"/>
+        <path d="M40 84 C180 70, 320 64, 560 80"/>
+      </g>
+      <path class="ink" d="M196 122 Q258 76, 340 80 Q420 87, 466 106 Q398 128, 328 128 Q248 132, 196 122 Z"/>
+      <path d="M196 122 Q258 76, 340 80 Q420 87, 466 106 Q398 128, 328 128 Q248 132, 196 122 Z" fill="#1B2621" opacity=".08"/>
+      <path class="ink" d="M466 106 L506 94 L500 116 Z"/>
+      <circle cx="222" cy="114" r="3.5" class="inkF"/>
+      <g class="tealS" opacity=".35">
+        <path d="M40 160 C180 164, 320 166, 560 158"/>
+      </g>
+      <line x1="20" y1="188" x2="580" y2="188" class="ink"/>
+      <path class="ink-t" d="M300 132 v52" stroke-dasharray="3 4"/>
+      <text x="332" y="166" >ground effect band</text>
+    </svg>
+    <figcaption><b>Plate XIV.</b> A Skimmer at cruise. There is no fuselage and no separate wing: the outline of the animal <em>is</em> the aerofoil section, and its organs are packed into a body no thicker than the shape can carry before it stalls.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Length</span><span class="v">18 cm – 1.6 m</span></div>
+    <div><span class="k">Senses</span><span class="v">Echolocation; a dorsal light patch</span></div>
+    <div><span class="k">Diet</span><span class="v">Airborne prey, Springhoppers taken mid-hop, Driftbladder tissue</span></div>
+    <div><span class="k">Controls</span><span class="v">Body camber and tail pitch. Nothing else exists to control</span></div>
+  </div>
+
+  <p>Flight is cheap on Vellum. A wing here has no tips for pressure to spill around, so the drag that dominates flight elsewhere simply does not arise, and a Skimmer at cruise is spending energy on almost nothing but the friction of air along its skin. Flight has evolved independently three times, which tells you how low the barrier is.</p>
+  <p>Control is correspondingly simple. There is no roll, no yaw, no banking; only pitch. The Skimmer steers by arching its back, and its tail blade — a stiff flat surface beating up and down, exactly like the Sillfish's from which it descends — provides thrust on both halves of the stroke. Its trailing edge must stay sharp. A Skimmer with a damaged tail does not lose speed; it loses lift, and it does not fly again.</p>
+
+  <h3>Two habits worth noting</h3>
+  <p>The first is the low cruise. Near the ground, air trapped between the animal and the surface cannot escape sideways, and the lift benefit is far larger than it would be elsewhere. Whole lineages of Skimmer never climb at all, running the contour of the land a body-length up, for almost nothing.</p>
+  <p>The second is that Skimmers never fly in file. A wake here does not dissipate — the vortices merge and grow and hang in the air for many minutes — so following another animal directly is dangerous, and every flock on Vellum is stacked by altitude rather than strung out in a line. It also means a Skimmer can track another animal's trail through empty air long after it has gone.</p>
+</section>
+
+<!-- 15 ================================================== -->
+<section class="slide" data-t="Springhopper">
+  <h2>Springhopper</h2>
+  <p class="dek">The ground's apex predator is a child.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 240" role="img" aria-label="A symmetrical two-legged hopper standing on the ground with a sensory patch at each end of its body and one leg fore and one aft.">
+      <line x1="20" y1="188" x2="580" y2="188" class="ink"/>
+      <path class="ink-t" d="M120 188 Q300 62 480 188" stroke-dasharray="5 5"/>
+      <ellipse cx="300" cy="112" rx="66" ry="30" class="ink"/>
+      <ellipse cx="300" cy="112" rx="66" ry="30" fill="#1B2621" opacity=".07"/>
+      <circle cx="252" cy="108" r="6" class="inkF"/>
+      <circle cx="348" cy="108" r="6" class="inkF"/>
+      <path class="ink" d="M262 140 v48 M338 140 v48" stroke-width="3"/>
+      <path class="ink" d="M262 188 l-14 6 M338 188 l14 6"/>
+      <path class="ink-t" d="M262 140 L214 188 M338 140 L386 188" stroke-dasharray="4 4"/>
+      <path class="ink" d="M300 142 q-8 12 0 20 q8 -8 0 -20"/>
+      <text x="300" y="226" text-anchor="middle">identical at both ends — it never turns round</text>
+    </svg>
+    <figcaption><b>Plate XV.</b> A Springhopper at rest. Sensory patches at both ends and a leg at each; the dashed legs show the alternate push angles. Aim is set by pushing harder with one leg than the other, so the animal launches either way without rotating.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Length</span><span class="v">40–90 cm</span></div>
+    <div><span class="k">Senses</span><span class="v">Ground vibration and echolocation — the only animal with both</span></div>
+    <div><span class="k">Diet</span><span class="v">Ridgeworms, stranded Sillfish, small Skimmers, carrion</span></div>
+    <div><span class="k">Hop</span><span class="v">2.4 body lengths horizontal; 1.9 m vertical clearance</span></div>
+    <div><span class="k">Status</span><span class="v">Juvenile stage of the Driftbladder</span></div>
+  </div>
+
+  <p>For most of the study of Vellum the Springhopper was classified as its own animal, and the error is understandable: nothing about it resembles what it becomes. It is compact, armoured at both ends, sprung, and aggressive. It is also the only creature on the ground that can get past another, and it uses that almost exclusively for killing — a hop that ends on top of something smaller is a strike delivered with the animal's entire weight.</p>
+  <p>Its two senses tell the story of its life. Ground vibration is for hunting: it feels a Ridgeworm surfacing from kilometres off and arrives in three hops. Echolocation is for the sky, and it is not for finding food. It is for finding <em class="term">shadow</em> — specifically, for knowing whether there is a Driftbladder curtain overhead before it commits to a leap.</p>
+
+  <blockquote>The commonest cause of death in a Springhopper is being caught by an adult of its own species.</blockquote>
+
+  <p>The curtain does not distinguish. A Springhopper that begins its metamorphosis beneath a hanging adult will inflate directly into the tendrils of something that may well be its parent. The behaviour that results is one of the strangest on Vellum: in the weeks before it changes, a Springhopper stops hunting and begins to travel, hopping in one direction along the line, sounding the sky over and over, looking for a stretch of open air. Only when it finds one does it stop and begin to swell.</p>
+</section>
+
+<!-- 16 ================================================== -->
+<section class="slide" data-t="Driftbladder">
+  <h2>Driftbladder</h2>
+  <p class="dek">The largest living thing on Vellum, and the least able to go anywhere.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 300" role="img" aria-label="A Driftbladder: a tall lens-shaped gas bag with a ring of muscle around it, a horizontal photosynthetic membrane spread above, a small body beneath, and a curtain of tendrils hanging down toward the ground.">
+      <path class="ink" d="M300 34 Q356 128 300 214 Q244 128 300 34 Z"/>
+      <path d="M300 34 Q356 128 300 214 Q244 128 300 34 Z" fill="#2E6E62" opacity=".13"/>
+      <path class="ink-t" d="M258 118 q42 -14 84 0" />
+      <path class="oxS" d="M236 124 l22 0" marker-end="url(#ar4)"/>
+      <path class="oxS" d="M364 124 l-22 0" marker-end="url(#ar4)"/>
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round"/></marker></defs>
+      <text x="190" y="128" text-anchor="middle">squeeze ring</text>
+
+      <path class="tealS" d="M170 52 Q300 26 430 52" stroke-width="2.6"/>
+      <path class="ink-t" d="M186 52 v10 M226 46 v10 M266 40 v10 M306 39 v10 M346 42 v10 M386 48 v10 M416 54 v10"/>
+      <text x="466" y="44" text-anchor="middle">membrane</text>
+
+      <ellipse cx="300" cy="228" rx="26" ry="15" class="ink"/>
+      <g class="ink">
+        <path d="M282 242 q6 34 -2 54 M292 243 q-4 36 4 56 M300 244 q6 34 -2 54 M310 243 q-4 36 4 56 M320 241 q6 34 -2 54"/>
+      </g>
+      <line x1="20" y1="290" x2="580" y2="290" class="ink-t"/>
+      <text x="440" y="270" text-anchor="middle">tendril curtain</text>
+      <path class="ink-t" d="M400 262 Q360 268 328 274" stroke-dasharray="4 4"/>
+    </svg>
+    <figcaption><b>Plate XVI.</b> An adult Driftbladder, tendrils deployed. The bag is tall rather than wide: the only airflow it ever meets is the air it climbs and sinks through, and it is streamlined for that and nothing else.</figcaption>
+  </figure>
+
+  <div class="data">
+    <div><span class="k">Span</span><span class="v">Bag 4–11 m; curtain to 60 m</span></div>
+    <div><span class="k">Lift gas</span><span class="v">Hydrogen, fermented by gut symbionts inherited from the parent</span></div>
+    <div><span class="k">Propulsion</span><span class="v">None</span></div>
+    <div><span class="k">Senses</span><span class="v">Echolocation; light patches on the membrane</span></div>
+    <div><span class="k">Diet</span><span class="v">Sunlight, and whatever the curtain takes</span></div>
+    <div><span class="k">Lifespan</span><span class="v">80–140 years</span></div>
+  </div>
+
+  <p>Everything a Driftbladder does, it does by changing how much air it displaces. A ring of muscle around the bag contracts and it sinks; relaxes and it rises. It loses no gas doing this, so it can repeat it forever, and the manoeuvre takes seconds. That single control is its entire behavioural repertoire — its travel, its hunting, its escape and its courtship.</p>
+  <p>Travel works because the winds run counter at different heights. A bladder that wants to go one way rises until it finds a layer going that way. It follows that a Driftbladder's competence is not physical but geographic: it must know the circulation of the storm it lives in, at every altitude, and it must remember how that circulation shifts. Individuals that know their storm outlive drifters by decades. Whatever passes for intelligence on Vellum is here, in an animal that cannot move under its own power.</p>
+
+  <h3>The curtain</h3>
+  <p>It does not chase, because nothing needs to. Hanging tendrils from the body down toward the ground seals the airspace absolutely — there is no way round a curtain, only over it or through the gap beneath. The hunt consists of timing a descent so that the gap closes as something arrives. Two bladders at different heights can shut the sky entirely, and a pair that does so over a mountain pass will, within a few generations, have split the fauna on either side into different species.</p>
+
+  <h3>Sunlight and the deal it strikes</h3>
+  <p>The membrane spread above the bag is the highest surface on the world and is therefore never shaded. It supplies carbon and energy but no minerals — nitrogen, phosphorus and metals are in the ground, and an adult never touches the ground. This is the whole reason for the curtain, and the whole reason for the Springhopper: the juvenile spends years on the surface eating meat and hoarding minerals, and the adult spends a century in the sky spending them.</p>
+  <p>Its only predators come from above, where it cannot defend itself. A large Skimmer that climbs and dives can open a bag, and a bladder that loses its gas has a very long time to think about it on the way down.</p>
+</section>
+
+<!-- 17 ================================================== -->
+<section class="slide" data-t="The web">
+  <h2>The web</h2>
+  <p class="dek">Where Vellum's energy goes.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 330" role="img" aria-label="A food web. Sunlight feeds both the Driftbladder membrane in the sky and the Spreadturf mat on the ground. Ridgeworms eat turf; Springhoppers and Furrowsnakes eat worms; Skimmers take hoppers and attack bladders; bladder curtains take skimmers and hoppers alike.">
+      <circle cx="300" cy="26" r="12" class="goldF"/>
+      <g class="ink-t">
+        <path d="M262 40 L176 76" stroke-dasharray="4 4"/>
+        <path d="M338 40 L438 262" stroke-dasharray="4 4"/>
+      </g>
+
+      <g class="ink">
+        <ellipse cx="150" cy="92" rx="66" ry="24"/>
+        <ellipse cx="150" cy="284" rx="66" ry="24"/>
+        <ellipse cx="330" cy="284" rx="62" ry="24"/>
+        <ellipse cx="330" cy="188" rx="62" ry="24"/>
+        <ellipse cx="490" cy="188" rx="62" ry="24"/>
+        <ellipse cx="490" cy="284" rx="62" ry="24"/>
+      </g>
+      <text class="lab" x="150" y="97" text-anchor="middle">Driftbladder</text>
+      <text class="lab" x="150" y="289" text-anchor="middle">Spreadturf</text>
+      <text class="lab" x="330" y="289" text-anchor="middle">Ridgeworm</text>
+      <text class="lab" x="330" y="193" text-anchor="middle">Springhopper</text>
+      <text class="lab" x="490" y="193" text-anchor="middle">Skimmer</text>
+      <text class="lab" x="490" y="289" text-anchor="middle">Furrowsnake</text>
+
+      <g class="oxS" opacity=".8">
+        <path d="M216 284 L266 284" marker-end="url(#ar5)"/>
+        <path d="M330 260 L330 214" marker-end="url(#ar5)"/>
+        <path d="M392 284 L428 284" marker-end="url(#ar5)"/>
+        <path d="M330 164 L330 150 Q330 138 350 138 L470 138 Q490 138 490 152 L490 162" marker-end="url(#ar5)"/>
+        <path d="M490 260 L490 214" marker-end="url(#ar5)" stroke-dasharray="4 4"/>
+        <path d="M392 188 L428 188" marker-end="url(#ar5)" stroke-dasharray="4 4"/>
+        <path d="M196 108 Q252 150 274 176" marker-end="url(#ar5)"/>
+        <path d="M456 172 Q300 96 212 92" marker-end="url(#ar5)"/>
+      </g>
+      <defs><marker id="ar5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round"/></marker></defs>
+      <text x="300" y="322" text-anchor="middle">solid: eats · dashed: also eats · dotted from Kell: photosynthesis</text>
+    </svg>
+    <figcaption><b>Plate XVII.</b> The whole web. It is unusually short — four levels at most — because the first law makes mid-level predation so nearly impossible that only two carnivores have ever held on.</figcaption>
+  </figure>
+
+  <p>Two things about this diagram are worth dwelling on. The first is the loop running from the Driftbladder down to the Springhopper: that arrow is the curtain, and it means the largest animal on Vellum is a significant predator of its own young. It is not an accident of an overlapping niche. It is the mechanism that forces juveniles to disperse before they metamorphose, and it is very likely why Springhoppers travel at all.</p>
+  <p>The second is the arrow returning from the Skimmer to the Driftbladder. Everything else in this web feeds upward. That one arrow is the only thing keeping the sky in balance — remove the diving Skimmers and the bladders would shade the surface to death within a few million years, as they nearly did once already at the beginning of the present era.</p>
+</section>
+
+<!-- 18 ================================================== -->
+<section class="slide" data-t="What never happened">
+  <h2>What never happened</h2>
+  <p class="dek">A short list of ordinary things this world has never contained.</p>
+
+  <ul>
+    <li><strong>Colour.</strong> Nothing has ever seen, so nothing has ever needed to be seen. No camouflage, no warning stripes, no mimicry by appearance, no flowers.</li>
+    <li><strong>The wheel.</strong> Not merely undiscovered — impossible. A hub inside a housing cannot be joined to anything.</li>
+    <li><strong>Tunnel networks.</strong> A burrow cannot be propped without being sealed, so no colony, no hive, no warren has ever been dug.</li>
+    <li><strong>The confluence.</strong> No river has ever joined another river. No delta has ever formed.</li>
+    <li><strong>Escape.</strong> Nothing thrown from Vellum has ever left the system, which is why the sky keeps falling on it.</li>
+    <li><strong>Passing.</strong> On the ground, in four billion years, nothing has ever gone around anything.</li>
+    <li><strong>Night as a refuge.</strong> Since no predator ever hunted by light, darkness changed nothing. The only creature for which night matters is the Driftbladder, whose gas cools and sinks after sunset.</li>
+    <li><strong>Formation flight, schooling, the herd.</strong> A wake in this air does not disperse. To follow directly behind another animal is to fly into a standing wall of turning air.</li>
+  </ul>
+
+  <blockquote>Everything here is a profile. If a thing cannot be drawn as a single closed outline — if any part of it must be seen from the front — then it has never existed.</blockquote>
+
+  <h3>A note on the survey</h3>
+  <p>Seven kinds of life are described here and that is very nearly all of them. Vellum has no equivalent of an insect radiation, no reef, no grass-and-grazer arms race with a hundred players. The plane is a narrow place: it offers a line to stand on, a band of air, a band of water, and a shallow crust. There is not much room to be different in.</p>
+  <p>What it offers instead is severity. Every rule is absolute here — a shadow takes all the light, an obstruction stops everything, a wall makes two worlds. Nothing is a matter of degree. That is what makes a world of two dimensions worth the trouble of imagining: not that it is stranger than ours, but that it is so much less forgiving of the same physics.</p>
+</section>
+
+</div>
+
+<nav class="bar">
+  <button id="prev" type="button">Back</button>
+  <span class="pos" id="pos">1 / 18</span>
+  <button id="next" type="button">Next</button>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var pos = document.getElementById('pos');
+  var mast = document.getElementById('mastnum');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var toc = document.getElementById('toc');
+  var roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII'];
+  var i = 0;
+
+  slides.forEach(function(s, n){
+    if (n === 0) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="pl">' + roman[n] + '</span>' + s.dataset.t;
+    b.addEventListener('click', function(){ go(n); });
+    toc.appendChild(b);
+  });
+
+  function go(n){
+    if (n < 0 || n >= slides.length) return;
+    slides[i].classList.remove('on');
+    i = n;
+    slides[i].classList.add('on');
+    pos.textContent = (i + 1) + ' / ' + slides.length;
+    mast.textContent = slides[i].dataset.t;
+    prev.disabled = (i === 0);
+    next.disabled = (i === slides.length - 1);
+    window.scrollTo(0, 0);
+  }
+
+  prev.addEventListener('click', function(){ go(i - 1); });
+  next.addEventListener('click', function(){ go(i + 1); });
+  document.addEventListener('keydown', function(e){
+    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') go(i + 1);
+    if (e.key === 'ArrowLeft') go(i - 1);
+  });
+
+  go(0);
+})();
+</script>
