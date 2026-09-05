@@ -1408,9 +1408,69 @@ None, but MEMORY.md decision 22 records planetary rotation as a known gap needin
 
 ---
 
-## SESSION 17 — 2026-09-05 — Rotation layer PRP — open
+## SESSION 17 — 2026-09-06 — Rotation layer PRP — closed
 
 Branch: sim/rotation-layer
+
+### WHAT WAS DONE
+
+Wrote `PRPs/rotation-layer.md`. No code — it awaits approval and it introduces a new free parameter.
+
+MEMORY.md decision 22 recorded that spin needs its own PRP: a rotation rate is a world constant, the
+surface frame turns relative to inertial space, and insolation becomes a function of surface
+position as well as orbital phase. This is that PRP.
+
+**Seven results were derived and checked before writing it**, so the PRP rests on measurement rather
+than expectation:
+
+1. **Angular momentum is a signed scalar** — no axis in the plane for it to point along. Already
+   established in the orbit layer.
+2. **The moment of inertia of a uniform disc is `MR²/2`**, verified by integrating with a per-area
+   density. Identical to the 3D coefficient — another case where two dimensions do *not* change the
+   answer, and it gets a test for the same reason kinematic viscosity has one.
+3. **The terminator is two points, not a curve.** In 3D it is a great circle; on a closed surface
+   curve, day and night are two arcs meeting at two points.
+4. **The lit fraction is `arccos(R/d)/π`** — a third at `d/R = 2`, 0.468 at `d/R = 10`, tending to
+   exactly a half for a distant star. The distant-star approximation is wrong by 6% at `d/R = 10`,
+   so the PRP requires the exact form.
+5. **A 2D planet flies apart when its surface moves at orbital speed.** Breakup is `√(G₂M)/R`, so the
+   surface speed there is `√(G₂M) = v_c` — and circular speed in two dimensions is the same at every
+   radius, so that is the speed of an orbit *anywhere*.
+6. **Total intercepted power is `F·2R`**, the disc presenting a cross-section of length `2R`.
+   Integrating `F·cos(incidence)` over the lit arc gives exactly that, confirmed numerically. This
+   is the strongest invariant available and the PRP makes it the headline test.
+7. **No axial tilt is possible**, so the PRP forbids adding a parameter for one. A parameter that
+   must always be zero is an invitation to set it.
+
+The scope is illumination, not climate: this layer says where the light falls and when, and what the
+ground does with it belongs to a climate layer. Oblateness is excluded and becomes a ledger entry —
+a spinning body bulges, and modelling that needs the material response abstracted at T2.4.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/rotation-layer.md   — NEW. Awaits approval
+    CONTEXT.md               — this entry
+
+### TESTS WRITTEN
+
+None — not approved. The test list is the substance. Two acceptance criteria are the ones that
+matter: the intercepted-power identity must fail when `cos(incidence)` is dropped, and the lit
+fraction must fail when the distant-star approximation replaces the exact geometry.
+
+### DECISIONS MADE
+
+None. One new free parameter — the rotation rate — is sent for approval with the PRP rather than
+smuggled in.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- `PRPs/rotation-layer.md` awaits approval. Branch `sim/rotation-layer` unmerged, unpushed.
+- Vellum still does not spin, so there is still no night anywhere on it.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1418,22 +1478,19 @@ Branch: sim/rotation-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
+`PRPs/rotation-layer.md`.
 
-Branch `feat/viewer-rotation` is unmerged. Merge it first.
+**If the rotation PRP is approved, implement it test-first** on branch `sim/rotation-layer`.
+Approval also covers one new free parameter: the rotation rate, a world constant.
 
-Three candidates, in the order I would take them:
+The two acceptance criteria most easily skipped are the ones that matter: the intercepted-power
+identity `∫ F·cos(incidence) ds = F·2R` must fail when the cosine is dropped, and the lit fraction
+must fail when `arccos(R/d)` is replaced by the distant-star half. Both verified by mutation, as
+every layer so far has been.
 
-1. **Water** — basins as local minima of `h`, filling, and the unbranched runs that follow from
-   having no third direction. The first layer that can produce a number the monograph only guessed:
-   the basin count.
-2. **Planetary rotation** — Vellum currently has no day (MEMORY.md decision 22). A rotation rate is
-   a new world constant, the surface frame turns relative to inertial space, and insolation becomes
-   a function of surface position as well as orbital phase. Small module, real consequences.
-3. **Filled ground** in the viewer — cosmetic, but it will matter once there is water to draw
-   against the profile.
-
-Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
+And per Session 14's rule, this one must actually be looked at: run the viewer, zoom to the ground,
+and watch a point pass from day into night.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
