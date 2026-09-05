@@ -514,6 +514,12 @@ None. One was opened rather than assumed.
 
 ---
 
+## SESSION 7 — 2026-09-05 — Units layer implementation — open
+
+Branch: setup/context-system
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
