@@ -191,10 +191,26 @@ and must be found — do not adjust the result.
 - **No orbit closes.** By Bertrand's theorem only inverse-square and harmonic force laws give closed
   orbits; `1/r` is neither. Every orbit is a rosette.
 - **Apsidal precession is fast.** For near-circular orbits the radial and angular frequencies stand
-  in the ratio `√2`, so the apsidal angle is `π/√2 ≈ 127.3°`, successive perihelia are `254.6°`
-  apart, and the apsis line regresses about **105° per orbit**. A season works its way round the
-  calendar in roughly **3.4 orbits**. *The monograph's "~900 years" is wrong by a factor of ~300.*
-  **To be re-confirmed numerically by the first orbital integrator before anything rests on it.**
+  in the ratio `√2`, so the apsidal angle is `π/√2 ≈ 127.2792°`, successive perihelia are
+  `254.5584°` apart, and the apsis line regresses **105.4416° per orbit**. *The monograph's "~900
+  years" is wrong by a factor of ~300.* **Confirmed numerically** by `sim/orbit/` in Session 9;
+  measured `254.5563°` at `v/v_c = 1.01` with timestep convergence.
+- **A season works round the calendar in exactly `2 + √2 ≈ 3.414214` orbits.** Closed form:
+  `2π / (2π − 2·π/√2) = 2 + √2`. Confirmed numerically.
+- **Circular orbital speed is independent of radius:** `v_c = √(G₂M)`, identical at every distance,
+  because `r·dΦ/dr = G₂M` leaves no `r`. Every circular orbit around Kell moves at the same speed,
+  however far out — the two-dimensional analogue of a flat galactic rotation curve. Verified from
+  `r = 0.5` to `r = 1000`.
+- **Kepler's third law is replaced by `T ∝ r`.** Period is `2πr/√(G₂M)`, linear in radius rather
+  than `r^(3/2)`. Verified: fitted exponent 1.0 to 1e-12.
+- **The orbital equation of motion is scale-invariant.** `r → kr` with `t → kt` leaves it unchanged,
+  so orbit *shape* — and therefore the apsidal angle — is independent of scale. A practical
+  consequence found while testing: an integrator leaking energy inflates an orbit without changing
+  its measured precession, so precession is a poor diagnostic of integration quality here and the
+  orbit's radius is a good one.
+- **The turning radius for a radial launch is `r₀·exp(v²/(2G₂M))`** — finite for every launch speed,
+  which is what "no escape velocity" means concretely. It grows so fast that above roughly `37.7×`
+  the circular speed it exceeds double precision, even though the trajectory is still bound.
 - **Seasons can only come from eccentricity.** A disc has no obliquity — there is no axis to tilt in
   a plane — so orbital distance is the sole driver.
 

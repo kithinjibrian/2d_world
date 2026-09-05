@@ -9,6 +9,11 @@ Never deleted. Older entries are never modified.
 ## [Unreleased]
 
 ### Added
+- The orbit layer — Vellum's motion around Kell under two-dimensional gravity, with the insolation
+  it produces. Establishes in code what had only been derived on paper: circular orbital speed is
+  the same at every distance, orbital period is linear in radius rather than Kepler's three-halves
+  power, the apsis regresses 105.44° every orbit so no orbit ever closes, a season works round the
+  calendar in 2+√2 orbits, and no launch speed however large ever escapes.
 - The units layer — the simulation's first module. Every physical quantity now carries checkable
   two-dimensional dimensions, the natural unit system fixes `G₂` and `σ₂` to 1, and formulas written
   with a three-dimensional scaling law fail a test rather than producing a plausible number.

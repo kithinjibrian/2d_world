@@ -98,6 +98,66 @@ class Quantity:
             )
         return self.value
 
+    def scalar(self, expected: Dimension) -> float:
+        """Unwrap to a single float, checking dimensions and shape.
+
+        Use this wherever the caller knows it is holding one value. It exists
+        because ``magnitude`` returns ``float | NDArray``, which every caller
+        would otherwise have to narrow by hand — and a narrowing written by
+        hand at forty call sites is a narrowing that will be wrong at one.
+
+        Parameters
+        ----------
+        expected : Dimension
+            The dimension the caller requires.
+
+        Returns
+        -------
+        float
+
+        Raises
+        ------
+        DimensionError
+            If the dimension does not match.
+        ValueError
+            If the value is an array rather than a scalar.
+
+        Examples
+        --------
+        >>> from sim.units import Quantity, LENGTH
+        >>> Quantity(2.0, LENGTH).scalar(LENGTH)
+        2.0
+        """
+        value = self.magnitude(expected)
+        if not isinstance(value, float):
+            raise ValueError(
+                f"expected a scalar quantity in [{expected}], got an array of "
+                f"shape {np.shape(value)}"
+            )
+        return value
+
+    def array(self, expected: Dimension) -> NDArray[np.float64]:
+        """Unwrap to a float64 array, checking dimensions.
+
+        A scalar is promoted to a zero-dimensional array rather than rejected,
+        so callers that accept either shape need only one path.
+
+        Parameters
+        ----------
+        expected : Dimension
+            The dimension the caller requires.
+
+        Returns
+        -------
+        NDArray[np.float64]
+
+        Raises
+        ------
+        DimensionError
+            If the dimension does not match.
+        """
+        return np.asarray(self.magnitude(expected), dtype=np.float64)
+
     def __mul__(self, other: Quantity | float) -> Quantity:
         """Multiply, combining dimensions. A plain number leaves them alone."""
         if isinstance(other, Quantity):

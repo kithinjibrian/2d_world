@@ -702,9 +702,123 @@ None.
 
 ---
 
-## SESSION 9 — 2026-09-05 — Orbit layer implementation — open
+## SESSION 9 — 2026-09-05 — Orbit layer implementation — closed
 
 Branch: sim/orbit-layer
+
+### WHAT WAS DONE
+
+Implemented the orbit layer test-first. **174 tests**, `mypy --strict` clean, `ruff` clean. Tests
+were written and run before any implementation existed; the first run failed on five collection
+errors.
+
+`sim/orbit/` integrates the two-body problem under `F ∝ 1/r` with velocity-Verlet, measures the
+apsidal angle, and produces insolation. `sim/star/` holds Kell, stubbed. Six consequences of the
+force law are now established in code rather than on paper, and `docs/AXIOMS.md` §3 was updated to
+say so.
+
+**Two of my own claims were tested and found wrong. Both are recorded rather than quietly fixed.**
+
+**1. The boundedness test was meaningless as designed.** The Session 8 scratch script "confirmed"
+that nothing escapes by launching at 100× circular speed and observing a finite maximum radius. That
+proves nothing: the turning radius is `r₀·exp(v²/(2G₂M))`, which at 100× circular is about `e^5000`,
+so the trajectory had simply not turned around yet. Three tests failed on first run for exactly this
+reason.
+
+The honest formulation is now split in two. Where the turn is reachable (1.5–2.5× circular) the
+integrated maximum is checked against the analytic turning radius, which also cross-checks the
+screening path against the full solve. Where it is not, boundedness is asserted analytically, since
+it is a statement about the potential rather than something an integration can demonstrate. A
+by-product worth knowing: the turning radius exceeds double precision above roughly **37.7×** the
+circular speed, so `radial_turning_radius` raises there with a message saying the trajectory is
+still bound and only the number is unrepresentable.
+
+**2. The PRP's justification for requiring a symplectic integrator was wrong.** It claimed a
+non-symplectic scheme would manufacture spurious apsidal precession, indistinguishable from the
+real thing. Mutating to forward Euler and measuring:
+
+    VERLET  T=1500   sweep=254.5063   energy band  2.26e-08   r_max=1.1043
+    EULER   T=1500   sweep=254.5076   energy drift +6.56e-01  r_max=2.1251
+
+Euler inflated the orbit's maximum radius by 93% while the measured sweep moved by 0.0013°. The
+reason is that **a logarithmic potential is scale-invariant** — `r → kr` with `t → kt` leaves the
+equation of motion unchanged — so an orbit inflated by numerical energy is nearly a rescaled copy of
+itself and keeps its shape and apsidal angle. Precession is protected here in a way it would not be
+under an inverse-square force.
+
+The requirement stands, for the reason that actually bites: **flux goes as `1/r`**, so a silently
+doubled orbital radius halves the insolation with no symptom anywhere in the precession measurement.
+That is exactly the plausible-wrong-number failure this project exists to catch, located somewhere
+other than predicted. The suite now guards it directly with `TestOrbitScaleDoesNotDrift`, and the
+PRP carries a dated FINDING note rather than an edited-away claim.
+
+**A third error, caught mid-check.** The first attempt at the Euler mutation removed the leading
+half-kick, which produces *symplectic* Euler (Euler–Cromer), not forward Euler. The suite passed and
+I nearly recorded "Euler barely matters" as a finding. It only surfaced because the energy behaviour
+looked too good for a scheme that was supposed to be dissipative.
+
+**An API gap surfaced.** `Quantity.magnitude()` returns `float | NDArray`, so every caller had to
+narrow by hand — twenty mypy errors across the orbit tests. Added `Quantity.scalar()` and
+`Quantity.array()`, which validate dimension *and* shape and return a precise type. This removed a
+scattering of `assert isinstance(...)` from the implementation too. Only a real consumer could have
+exposed this; the units layer looked complete without it.
+
+### FILES CREATED OR MODIFIED
+
+    sim/orbit/analytic.py      — NEW. Screening path: closed forms, turning radii
+    sim/orbit/integrator.py    — NEW. Velocity-Verlet, fixed step, energy and singularity guards
+    sim/orbit/analysis.py      — NEW. Conserved quantities; apsidal angle by parabolic refinement
+    sim/orbit/insolation.py    — NEW. Flux as L/(2*pi*r)
+    sim/orbit/__init__.py      — NEW. Public surface
+    sim/star/kell.py           — NEW. The stub. Raises for everything beyond mass and luminosity
+    sim/units/quantity.py      — scalar() and array() added
+    sim/units/named.py         — LUMINOSITY added
+    sim/tests/orbit/*.py       — NEW, four files
+    sim/tests/star/test_kell.py — NEW
+    docs/AXIOMS.md             — §3 rewritten: six confirmed consequences, caveat removed
+    PRPs/orbit-layer.md        — dated FINDING note on the symplectic justification
+    MEMORY.md                  — decision 16; state and next-session block
+    CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+174 total, 68 new in this layer.
+
+- **Dimensional:** flux carries FLUX and rejects the `1/r²` form; gravity is an acceleration.
+- **Invariant:** nothing escapes where demonstrable, and analytically where not; energy bounded not
+  secular; angular momentum conserved and scalar in 2D; radius strictly positive; determinism;
+  **orbit scale does not drift**, the test that actually catches a bad integrator.
+- **Physical predictions:** `v_c` independent of radius over three decades; period exponent 1.0 and
+  demonstrably not 1.5; apsidal angle `π/√2` with timestep convergence; monotone drift with
+  eccentricity; season cycle `2+√2`.
+- **Screening:** analytic and integrated agree; and an AST check that `analytic.py` does not import
+  the integrator, so a screening path cannot secretly integrate.
+- **Stub:** every unavailable stellar property raises, with `DECISION-010` in the message.
+
+### MUTATION RESULTS
+
+    force law 1/r -> 1/r^2        22 failed   caught
+    velocity-Verlet -> Euler      10 failed   caught (via the energy guard, not precession)
+
+### DECISIONS MADE
+
+- The symplectic requirement is retained but re-justified; see MEMORY.md decision 16.
+- Radial infall is rejected at validation rather than integrated badly: the potential is singular at
+  the origin and a fixed-step scheme cannot resolve it. The closed form is offered instead.
+- `Quantity.scalar()` / `.array()` added to the units layer rather than narrowing at call sites.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `sim/orbit-layer` is not merged and not pushed.
+- DECISION-012, -013, -014 all still open; they converge on the climate layers.
+- Debris and the impact cycle remain deferred and need their own PRP.
+- T0.3 is still unvalidated in the sense that no signal speed exists to compare against, though
+  `Trajectory.peak_speed` now reports what would be needed.
+- The 2+1D graviton count remains a hand derivation with nothing planned to check it.
 
 ---
 
@@ -712,23 +826,24 @@ Branch: sim/orbit-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
-`PRPs/orbit-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-**If the orbit PRP is approved, implement it test-first**, on branch `sim/orbit-layer`. The two
-acceptance criteria most easily skipped are the ones that matter: mutate the force law to `1/r²` and
-confirm the suite goes red, and demonstrate once with forward Euler that a non-symplectic integrator
-corrupts the precession measurement — that demonstration is the justification for the whole
-integrator requirement.
+The orbit layer is complete and green on branch `sim/orbit-layer`, unmerged. Merge it to `main`
+before starting new work, or branch from it.
 
-Finish by updating `docs/AXIOMS.md` §3: drop the "to be re-confirmed numerically" caveat from the
-apsidal-precession entry, and add the three consequences that were not previously recorded —
-circular speed independent of radius, `T ∝ r` replacing Kepler's third law, and the `2 + √2` season
-cycle.
+Two candidates for the next PRP:
 
-Environment: `.venv/` exists. Run `.venv/bin/pytest`, `.venv/bin/mypy`,
-`.venv/bin/ruff check sim/`.
+- **The planet layer** — Vellum as a body: surface gravity, atmospheric column, thermal equilibrium
+  under `T³` emission and `1/r` insolation. Recommended, because it moves toward the scan and
+  because DECISION-012 needs a concrete habitability predicate before a sweep can mean anything.
+- **Debris and the impact cycle** — deferred out of the orbit layer. The natural continuation of the
+  sky. Whether it is N-body or statistical is itself worth a decision entry.
 
-Still open: **DECISION-012**, what counts as habitable. It blocks the scan.
+Carry one lesson from Session 9 into whichever comes next: **mutate the physics and re-run before
+believing a justification.** Two claims that survived a PRP review and a full implementation failed
+their first real test — the boundedness demonstration and the reason for requiring a symplectic
+integrator. Both are recorded in MEMORY.md decision 16 and in the PRP's FINDING note.
+
+Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

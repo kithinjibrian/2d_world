@@ -111,3 +111,38 @@ class TestImmutability:
         ratio = Quantity(3.0, LENGTH) / Quantity(1.0, LENGTH)
         assert ratio.dimension == DIMENSIONLESS
         assert ratio.magnitude(DIMENSIONLESS) == pytest.approx(3.0)
+
+
+class TestTypedAccessors:
+    """scalar() and array() were added while building the orbit layer.
+
+    magnitude() returns float | NDArray, which every caller had to narrow by
+    hand — and a narrowing written by hand at forty call sites is one that will
+    be wrong at one of them.
+    """
+
+    def test_scalar_returns_a_float(self) -> None:
+        assert Quantity(2.5, LENGTH).scalar(LENGTH) == 2.5
+
+    def test_scalar_rejects_an_array(self) -> None:
+        q = Quantity(np.array([1.0, 2.0]), LENGTH)
+        with pytest.raises(ValueError, match="scalar"):
+            q.scalar(LENGTH)
+
+    def test_scalar_still_checks_dimensions(self) -> None:
+        with pytest.raises(DimensionError):
+            Quantity(2.5, LENGTH).scalar(TIME)
+
+    def test_array_returns_float64(self) -> None:
+        out = Quantity(np.array([1, 2, 3]), LENGTH).array(LENGTH)
+        assert out.dtype == np.float64
+        assert np.array_equal(out, [1.0, 2.0, 3.0])
+
+    def test_array_promotes_a_scalar(self) -> None:
+        out = Quantity(4.0, LENGTH).array(LENGTH)
+        assert out.shape == ()
+        assert float(out) == 4.0
+
+    def test_array_still_checks_dimensions(self) -> None:
+        with pytest.raises(DimensionError):
+            Quantity(np.array([1.0]), LENGTH).array(MASS)

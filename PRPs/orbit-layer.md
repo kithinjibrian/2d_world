@@ -54,6 +54,16 @@ not be treated as such — they are consequences of T1.1.
 
 ### Must Do
 
+> **FINDING (2026-09-05, Session 9) — the justification below was tested and is wrong.**
+> Forward Euler does *not* measurably corrupt the apsidal angle here: it inflated the orbit's
+> maximum radius from 1.10 to 2.13 over 1500 time units while the measured sweep moved less than
+> 0.001°. A logarithmic potential is scale-invariant (`r → kr` with `t → kt`), so an orbit inflated
+> by numerical energy is a rescaled copy of itself and keeps its shape. The requirement stands, but
+> for a different reason: secular drift wrecks the orbit's **scale**, and flux goes as `1/r`, so a
+> doubled radius halves the insolation with no symptom in the precession measurement. The suite now
+> guards that directly (`TestOrbitScaleDoesNotDrift`). Recorded rather than edited away, because a
+> justification that turned out to be wrong is worth more visible than hidden.
+
 - **Integrate with velocity-Verlet at a fixed timestep.** Symplectic, so energy error is bounded
   rather than secular.
 

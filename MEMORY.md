@@ -281,9 +281,39 @@ discriminating tests, which construct the wrong form locally and assert it is wr
 
 ---
 
+### 16. Precession is a poor diagnostic of integration quality in a log potential
+
+**Decision:** The orbit layer's guard against a bad integrator is the stability of the orbit's
+**radius**, not the stability of its measured precession.
+
+**Why:** The orbit PRP asserted that a non-symplectic integrator would manufacture spurious apsidal
+precession. That was tested in Session 9 and is **false for this potential**. Forward Euler inflated
+the orbit's maximum radius from 1.10 to 2.13 over 1500 time units while the measured apsidal sweep
+moved by less than 0.001°.
+
+The reason is that a logarithmic potential is scale-invariant — `r → kr` with `t → kt` leaves the
+equation of motion unchanged — so an orbit inflated by numerical energy is very nearly a rescaled
+copy of itself, keeping its shape and its apsidal angle. Precession is protected here in a way it
+would not be under an inverse-square force.
+
+The symplectic requirement stands, for the reason that actually bites: **flux goes as `1/r`**, so a
+silently doubled orbital radius halves the insolation with no symptom anywhere in the precession
+measurement. That is precisely the plausible-wrong-number failure the project is built to catch,
+located somewhere other than where it was predicted.
+
+**Rules out:** Using a precession measurement as evidence that an integrator is sound. Adaptive
+stepping, which breaks symplecticity. Trusting a physics justification that has not been mutated
+and re-run — this one survived a PRP review and a full implementation before failing its first
+real test.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
+- **`sim/orbit/`** — two-body integration under `F ∝ 1/r`, the analytic screening path, apsidal
+  measurement, and insolation. **`sim/star/`** — Kell, stubbed and raising for anything beyond mass
+  and luminosity.
 - **`sim/units/`** — the first module. Dimension algebra over four base dimensions with `Fraction`
   exponents, the named-dimension table for 2D, `Quantity` for boundary checking, and the natural
   unit system in which `G₂` and `σ₂` are both 1. 101 tests, `mypy --strict` and `ruff` clean.
@@ -295,10 +325,11 @@ discriminating tests, which construct the wrong form locally and assert it is wr
   consequences (§3), and the abstraction ledger (§4). Settled and usable.
 
 ### In Progress
-- Nothing. The units layer is complete and the next layer has no PRP yet.
+- Nothing. The orbit layer is complete; the next layer has no PRP yet.
 
 ### Not Started
-- Every physics layer: orbit, planet, surface, water, air, life. None has a PRP.
+- planet, surface, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
+  deferred out of the orbit layer and need one.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate
   deciding which grid points count as habitable is DECISION-012 and still open.
 
@@ -306,27 +337,27 @@ discriminating tests, which construct the wrong form locally and assert it is wr
 
 ## NEXT SESSION START POINT
 
-Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md — in that order, then
-`docs/AXIOMS.md`.
+Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md, then `docs/AXIOMS.md`.
 
-The units layer is done and green. **The next artefact is the PRP for the orbit layer**, not code —
-the PRP rule holds for every module.
+The orbit layer is done and green: 174 tests, `mypy --strict` and `ruff` clean. `docs/AXIOMS.md` §3
+now records six established consequences of `F ∝ 1/r`, all confirmed in code rather than on paper.
 
-The orbit layer is where two hand derivations finally get checked, and both should be explicit
-acceptance criteria in its PRP:
-- **Apsidal regression of ~105° per orbit** for a near-circular orbit under `F ∝ 1/r`, giving a
-  season that works round the calendar in ~3.4 orbits. Derived from the ratio `ω_r/ω_θ = √2`; never
-  confirmed numerically.
-- **No trajectory is ever unbound**, at any launch speed. The logarithmic potential admits no escape
-  velocity, so an integrator that ever produces an escaping orbit is broken.
+Two candidates for the next PRP, and they are different in kind:
 
-Note the orbit layer is the first to need architecture rule 8 — a cheap screening path as well as a
-full solve — and the first to consume the stubbed Kell, which must raise rather than default.
+- **The debris population and the impact cycle.** Deferred out of the orbit layer to keep its scope
+  honest. It is the natural continuation of the sky, and it is what the monograph calls the
+  metronome of Vellum's biology. Needs N-body or a statistical treatment — that choice is itself
+  worth a decision entry.
+- **The planet layer** — Vellum as a body: surface gravity, atmospheric column, thermal equilibrium
+  under `T³` emission and `1/r` insolation. This is the first layer where DECISION-012 starts to
+  bite, since equilibrium temperature is what a habitability predicate would test.
 
-Environment: `.venv/` exists, managed with `uv`. `uv pip install -r` nothing — dependencies are
-declared in `pyproject.toml`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
+Recommend the planet layer, because it moves toward the scan and toward the surface, and because
+DECISION-012 needs a concrete definition before the sweep can mean anything.
 
-Also still open and worth putting to the user: **DECISION-012**, what counts as habitable. It blocks
-the scan.
+Still open: **DECISION-012** (what counts as habitable), **DECISION-013** (chemistry), **DECISION-014**
+(grey vs spectral transfer). All three converge on the climate layers.
+
+Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

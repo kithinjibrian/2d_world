@@ -69,6 +69,12 @@ STEFAN_BOLTZMANN: Final = FLUX / TEMPERATURE**3
 #: length, giving M T^-1 rather than the three-dimensional M L^-1 T^-1.
 VISCOSITY: Final = PRESSURE * TIME
 
+#: Radiated power. Dimensionally identical to POWER — the two-dimensionality
+#: shows up in the formula (L = 2*pi*R*sigma_2*T^3) and in how flux dilutes
+#: (1/r, not 1/r^2), not in the dimension itself. Named separately because a
+#: call site reads better for it.
+LUMINOSITY: Final = POWER
+
 # --- and one that does not ----------------------------------------------
 
 #: L^2 T^-1 in any number of dimensions, even though the dynamic viscosity it
@@ -96,6 +102,7 @@ NAMED_DIMENSIONS: Final[dict[str, Dimension]] = {
     "FORCE": FORCE,
     "ENERGY": ENERGY,
     "POWER": POWER,
+    "LUMINOSITY": LUMINOSITY,
     "SURFACE_DENSITY": SURFACE_DENSITY,
     "PRESSURE": PRESSURE,
     "FLUX": FLUX,
