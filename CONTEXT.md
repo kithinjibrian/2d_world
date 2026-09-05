@@ -1784,6 +1784,12 @@ None.
 
 ---
 
+## SESSION 22 — 2026-09-06 — Water layer PRP — open
+
+Branch: sim/water-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
