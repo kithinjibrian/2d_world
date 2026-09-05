@@ -999,6 +999,12 @@ None. DECISION-017 was already open and is now the gate on the surface layer.
 
 ---
 
+## SESSION 12 — 2026-09-05 — Surface layer PRP — open
+
+Branch: sim/surface-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
