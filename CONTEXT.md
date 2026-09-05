@@ -1160,9 +1160,92 @@ None.
 
 ---
 
-## SESSION 14 — 2026-09-05 — Viewer zoom defects — open
+## SESSION 14 — 2026-09-05 — Viewer zoom defects — closed
 
 Branch: fix/viewer-zoom
+
+### WHAT WAS DONE
+
+The user ran the viewer, zoomed in, and hit three defects in about thirty seconds. All three were
+real, all three were in shipped work, and none was caught by the 284 tests that existed.
+
+**1. The GROUND band was unreachable.** `Camera.MIN_SCALE` / `MAX_SCALE` were absolute constants in
+pixels per world unit, capped at 1e9. On a world 3.84e-5 units around that puts the deepest possible
+zoom at a span ratio of 3.3e-2 — still REGIONAL. The limit was reported honestly; there was simply
+no way past it.
+
+This is **the same error as MEMORY.md decision 18, in a second place.** Scale bands in absolute
+units had already been found meaningless in natural units and fixed. The zoom limits sat ten lines
+away in the same file and were left alone. Both are span ratios now.
+
+**2. Zooming in filled the window with gold.** `StarDisc` drew a circle of radius
+`0.02 * camera.scale` with no culling — twenty million pixels at close zoom, centred a world unit
+away, covering everything. The centre was clipped to the SDL int range; the radius never was. It now
+culls against the viewport, and refuses to draw when the camera is inside the disc rather than
+painting over the world.
+
+**3. Following Vellum put the camera inside the planet.** Following centred on the planet's *centre*,
+right only while the whole planet fits the viewport. Past that the surface is thousands of pixels
+off-screen — planet radius 6.1e3 px against a 400 px half-height — so zooming in showed empty space
+where the world should be. `Camera.focused_on_surface` and `_camera_for` now switch to a point on
+the surface once the planet no longer fits, and left/right walks along the ground, wrapping, because
+the surface has no edge.
+
+Also raised the demo terrain from 22 octaves to 34: at 22 the resolution floor sat above the entire
+GROUND band, so even once reachable there would have been nothing there but invented smoothness.
+
+### THE PROCESS FAILURE, WHICH IS THE POINT
+
+`PRPs/viewer-layer.md` had a validation step reading: *"Run it and zoom by hand from the full orbit
+to a metre of ground. The precision requirement is the kind that passes its unit test and still
+looks wrong, so it must also be looked at."*
+
+That was not done. Headless smoke tests were run instead — each layer drawn once at four scales,
+asserting only that some pixel changed. Every one of these defects passes that test trivially: a
+uniformly gold viewport *is* a change, an unreachable band is never visited, and a camera inside the
+planet still draws an orbit line.
+
+`sim/tests/view/test_zoom_journey.py` is what should have been written. It walks the whole zoom
+range — every band, about 140 steps — asserting that all four bands are visited, that some
+background survives every frame, that the ground stays on screen while following, and that terrain
+still has detail where the GROUND band begins. It catches all three, and it is the shape any
+range-spanning visual feature should be tested with.
+
+A rule went into CLAUDE.md's TESTING RULE: a feature whose output is visual is not validated by
+asserting that pixels changed.
+
+### FILES CREATED OR MODIFIED
+
+    sim/tests/view/test_zoom_journey.py  — NEW. The traversal that catches all three
+    sim/view/camera.py    — zoom limits as span ratios; focused_on_surface
+    sim/view/render.py    — StarDisc culls; PlanetDisc limited to SYSTEM and PLANETARY
+    sim/view/app.py       — _camera_for follows the surface; left/right walks the ground;
+                            demo terrain raised to 34 octaves
+    sim/tests/view/test_camera.py, test_precision.py — cover the new behaviour
+    CLAUDE.md, MEMORY.md (decision 21), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+295 total, 11 new. Measured after the fix, walking the full range: every band visited, background
+between 89% and 99.6% of every frame, ground on screen at every step, and terrain relief falling
+smoothly from 1.2e-7 to 9.0e-11 world units without reaching the resolution floor.
+
+### DECISIONS MADE
+
+- Zoom limits are span ratios (MEMORY.md decision 21).
+- `PlanetDisc` draws only at SYSTEM and PLANETARY; below that `TerrainTrace` draws the real profile,
+  and an outline circle through the middle of it is simply wrong.
+- Being inside the star draws nothing rather than filling the view. Hiding a camera that is
+  somewhere it should not be is worse than showing it.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `fix/viewer-zoom` unmerged, unpushed.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1172,21 +1255,16 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-The surface layer is complete and green on branch `sim/surface-layer`, unmerged. Merge it first.
+The viewer defects are fixed on branch `fix/viewer-zoom`, unmerged. Merge it first, then run
+`.venv/bin/python -m sim.view.app` and zoom to the ground — it gets there now.
 
-**The next PRP is water** — the layer where two dimensions bite hardest, and where almost everything
-follows from T0.1 with no new physics. A basin is a local minimum of `h`; filling it is a
-one-dimensional problem, not a watershed. **A river cannot branch**, because a tributary would have
-to arrive from a side that does not exist, so there are no confluences and no deltas — only single
-unbranched runs. And a basin has no drainage network at all: what is sealed in one is sealed for
-good.
+**The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
+follow from having no third direction. Leave stratification and the anoxic depth to a climate-facing
+layer, and erosion — which writes to the terrain residual — to its own PRP.
 
-Scope it as basin detection and filling. Leave stratification and the anoxic depth to a
-climate-facing layer, and leave erosion — which writes to the terrain residual — to its own PRP.
-
-Carry the Session 13 lesson: **measure a normalisation against the thing it is supposed to produce.**
-The octave decay was off by exactly the one-dimensional mode-density factor, the terrain looked
-perfectly plausible either way, and only an FFT of the field caught it.
+Carry the Session 14 lesson, now a rule in the TESTING RULE: **a visual feature is not validated by
+asserting that pixels changed.** Walk the whole range the feature exists to provide and assert
+sanity at every step.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
