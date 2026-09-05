@@ -18,6 +18,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from sim.periodic import wrap
+
 __all__ = ["Coordinate", "Disc", "add", "mod", "mul", "sub", "visible_surface_indices"]
 
 #: A scalar or an array of them. Never carries units.
@@ -135,23 +137,7 @@ def mul(a: Coordinate, b: Coordinate) -> Coordinate:
 def mod(a: Coordinate, b: float) -> Coordinate:
     """Wrap into [0, b), preserving float-or-array typing.
 
-    Uses the ``%`` operator rather than ``fmod(fmod(a, b) + b, b)``. The latter
-    is the usual trick for giving a negative input a positive result, and it
-    silently destroys precision: adding ``b`` quantises the value at ``b``'s
-    ulp, which for a surface 3.84e7 m around is 7.45 nanometres. A micron of
-    surface position lost 0.16 percent of itself that way, which is small
-    enough to look like rounding and large enough to be visible at ground zoom.
-    Python's ``%`` already returns the sign of the divisor, exactly.
-
-    One edge case still needs handling: for a tiny negative input, ``b - a``
-    rounds up to ``b`` itself, so ``%`` returns exactly the circumference
-    rather than something strictly below it. ``mod(-1e-9, 3.84e7)`` is
-    ``3.84e7``, because 1e-9 is under half an ulp there. Left alone that puts a
-    surface position out of range and breaks index arithmetic downstream, so
-    the wrap point is folded to zero, which is what it means.
+    Delegates to :func:`sim.periodic.wrap`, which is the single home for this
+    after the same subtlety bit twice in two modules.
     """
-    if isinstance(a, np.ndarray):
-        wrapped = np.mod(a, b)
-        return np.where(wrapped >= b, 0.0, wrapped)
-    scalar = a % b
-    return 0.0 if scalar >= b else scalar
+    return wrap(a, b)

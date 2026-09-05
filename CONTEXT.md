@@ -1474,9 +1474,109 @@ None.
 
 ---
 
-## SESSION 18 — 2026-09-06 — Rotation layer implementation — open
+## SESSION 18 — 2026-09-06 — Rotation layer implementation — closed
 
 Branch: sim/rotation-layer
+
+### WHAT WAS DONE
+
+Implemented the rotation layer test-first. **404 tests**, headless, `mypy --strict` and `ruff`
+clean. **Vellum turns on itself and has a day.** Zooming to the ground and letting time run shows a
+point pass from daylight into night; measured 8 transitions over 4 rotations, with the terminator
+visibly crossing the view in the partial frames (14.3% and 41.7% of the visible arc lit).
+
+`sim/rotation/spin.py` holds the rotating frame — surface coordinates are body-fixed, so a rock
+stays at the same `s` forever and the frame turns around it — plus the sidereal and solar days, the
+moment of inertia, and the breakup limit. `sim/rotation/illumination.py` holds the terminator, the
+lit arc, incidence and flux at a point on the ground. `TerrainTrace` now draws day and night in
+different colours, and `space` runs the clock so the world can be watched turning.
+
+**The illumination geometry is exact, and the approximations everyone reaches for are wrong here.**
+The instinct that half a world is lit is a *distant-star* result. The lit fraction is
+`arccos(R/d)/π`: 0.468 at `d/R = 10`, and exactly one third at `d/R = 2`. Likewise for intercepted
+power — the familiar `F·2R` cross-section form is asymptotic, while `L·arcsin(R/d)/π` is **exact**
+for a point source and any convex body, and they are 4.7% apart at `d/R = 2`. Measured against the
+implementation at four distances, both forms agree to six figures.
+
+That identity is the strongest invariant in the layer: it pins the incidence geometry, the `1/r`
+flux dilution and the terminator all at once. It caught every mutation tried — dropping
+`cos(incidence)`, substituting the distant-star terminator, and evaluating flux at the planet centre
+rather than at each surface point.
+
+**The breakup check rejected my own test fixture.** The first fixture used a rate of 1000 against a
+breakup limit of 283 — 3.5× over. The check is not decoration; an unphysical world is easy to
+specify by accident, and this one was specified by me while writing the tests for it.
+
+**The wrap subtlety appeared a third time, so it moved.** `sim/periodic.py` now owns `wrap`, and
+`sim/view/geometry.py` delegates to it. Two defects had already come from reimplementing this —
+`fmod(fmod+b, b)` quantising a micron at the period's ulp, and `%` returning exactly the period for
+a tiny negative. A third occurrence was the signal that it belongs in one place.
+
+It also gained `separation` and `distance`, prompted by a subtler failure. After exactly one
+sidereal day the phase lands 8.9e-16 short of a full turn, so the substellar point returns as
+`circumference − 1e-21`. Subtracting says it travelled the whole way round; on a closed curve it did
+not move at all. **Comparing positions on the surface must be circular distance, never subtraction**
+— and the water and life layers will need it constantly, since "how far apart are two things" on a
+closed curve is the shorter way round and is never more than half the world.
+
+### MUTATION RESULTS
+
+    drop cos(incidence)                       6 failed   caught
+    distant-star terminator instead of exact  5 failed   caught
+    flux from the planet centre               6 failed   caught
+
+### MEASURED, AS THE PRP REQUIRED
+
+    d/R      lit fraction    arccos(R/d)/pi     intercepted    L*asin(R/d)/pi
+    1.5          0.267725          0.267720    2.322795e-01      2.322795e-01
+    2.0          0.333335          0.333333    1.666667e-01      1.666667e-01
+    10.0         0.468115          0.468116    3.188428e-02      3.188428e-02
+    1000.0       0.499685          0.499682    3.183099e-04      3.183099e-04
+
+    breakup rate 283.406; the demo world spins at 100.0, 35.3% of it
+    sidereal day 0.06283, about 100 days to the orbit
+
+### FILES CREATED OR MODIFIED
+
+    sim/rotation/spin.py          — NEW. Rotating frame, days, inertia, breakup
+    sim/rotation/illumination.py  — NEW. Terminator, lit arc, incidence, flux, intercepted power
+    sim/rotation/__init__.py      — NEW
+    sim/periodic.py               — NEW. wrap, separation, distance — the shared closed-curve maths
+    sim/tests/rotation/*.py       — NEW, two files
+    sim/tests/test_periodic.py    — NEW
+    sim/view/geometry.py          — delegates wrapping to sim.periodic
+    sim/view/render.py            — TerrainTrace draws day and night separately
+    sim/view/app.py               — the demo world spins; space runs the clock
+    docs/AXIOMS.md                — section 3 gains rotation and illumination; section 4 gains
+                                    oblateness
+    MEMORY.md (22 amended, 23 and 24 added), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+404 total, 65 new. Body-fixed coordinates recovering exactly; phase periodic and bounded over long
+runs; sidereal versus solar day and a tidally frozen world having neither; the moment of inertia
+that does not change from 3D; breakup surface speed equal to circular orbital speed; exactly two
+terminator points; the lit fraction at four distances; every point seeing both day and night over
+one rotation; a frozen world having permanent day on one arc; night being exactly zero rather than
+small; and the intercepted-power identity at five distances.
+
+### DECISIONS MADE
+
+- One new free parameter approved with the PRP: the rotation rate, a world constant.
+- Oblateness abstracted rather than modelled, with a ledger entry.
+- No axial-tilt parameter, because a disc has no axis to tilt and a parameter that must always be
+  zero is an invitation to set it.
+- Wrapping and circular comparison extracted to `sim/periodic.py`.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `sim/rotation-layer` unmerged, unpushed.
+- The ground is still drawn as a thin line rather than filled.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1484,19 +1584,20 @@ Branch: sim/rotation-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
-`PRPs/rotation-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-**If the rotation PRP is approved, implement it test-first** on branch `sim/rotation-layer`.
-Approval also covers one new free parameter: the rotation rate, a world constant.
+Branch `sim/rotation-layer` is unmerged. Merge it first, then run
+`.venv/bin/python -m sim.view.app`, zoom to the ground and press `space` — a point passes from
+daylight into night as the world turns.
 
-The two acceptance criteria most easily skipped are the ones that matter: the intercepted-power
-identity `∫ F·cos(incidence) ds = F·2R` must fail when the cosine is dropped, and the lit fraction
-must fail when `arccos(R/d)` is replaced by the distant-star half. Both verified by mutation, as
-every layer so far has been.
+**The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
+follow from having no third direction. It is the first layer that can produce a number the monograph
+only guessed — the basin count. Use `sim.periodic.distance` for anything comparing positions on the
+surface; the rotation layer established why subtraction will not do.
 
-And per Session 14's rule, this one must actually be looked at: run the viewer, zoom to the ground,
-and watch a point pass from day into night.
+Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
+And the ground is drawn as a thin line, which will matter more once there is water to draw against
+the profile.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

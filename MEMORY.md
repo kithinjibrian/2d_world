@@ -436,7 +436,7 @@ exists for exactly that and catches all three.
 
 ---
 
-### 22. On a closed surface the camera must roll, and Vellum does not spin
+### 22. On a closed surface the camera must roll (Vellum now spins — see 23)
 
 **Decision:** The camera carries a roll angle, set to local vertical whenever the view is on the
 ground. **Separately: nothing in the simulation rotates.** Vellum has no spin, no day, no night.
@@ -446,26 +446,66 @@ direction differs at every position — at the far side of the world it is the e
 it is here. Without roll the ground tilts as you walk along it and is upside down halfway round.
 Verified at eight points around the world: up is up and the ground runs horizontally at every one.
 
-**Why no spin, and what it costs:** planetary rotation was excluded from the orbit layer's scope on
-purpose (`PRPs/orbit-layer.md`, Must NOT Do) to keep that module to two bodies. So Vellum revolves
-around Kell — the orbit is integrated and the rosette is real — but it does not turn on itself. The
-consequence is that **there is no day**: insolation at a point on the surface varies only with
-orbital distance, never with time of day, because no part of the surface ever faces away from Kell.
-
-Rotation is available in two dimensions — angular momentum here is a signed scalar rather than a
-vector, since there is no axis for it to point along — so this is a gap, not an impossibility. It
-needs its own PRP: a rotation rate is a new world constant, the surface coordinate frame turns
-relative to inertial space, and insolation becomes a function of surface position as well as
-orbital phase.
+**On spin:** this entry originally recorded that Vellum did not turn on itself. That was resolved by
+the rotation layer — see decision 23.
 
 **Rules out:** Drawing anything on the ground without rolling the camera. Treating current
 insolation results as day-resolved — they are orbital only.
 
 ---
 
+### 23. Vellum spins, and the illumination geometry is exact rather than asymptotic
+
+**Decision:** `sim/rotation/` gives Vellum a rotation rate (a world constant), a body-fixed surface
+frame that turns relative to inertial space, and the day that follows. Surface coordinates are
+body-fixed: a rock stays at the same `s` forever and the frame turns around it.
+
+**Why the geometry had to be exact:** the natural instinct is that half a world is lit. That is a
+*distant-star approximation*. The lit fraction is `arccos(R/d)/π`, which is 0.468 at `d/R = 10` and
+exactly one third at `d/R = 2`. Likewise the intercepted power: the familiar `F·2R` cross-section
+form is asymptotic, while `L·arcsin(R/d)/π` is exact for a point source and any convex body — 4.7%
+apart at `d/R = 2`. Both exact forms are used and both approximations are pinned as failures by
+tests.
+
+The intercepted-power identity is the strongest invariant in the layer: it checks the incidence
+geometry, the `1/r` flux dilution and the terminator simultaneously, and it caught all three
+mutations tried against it — dropping `cos(incidence)`, substituting the distant-star terminator,
+and evaluating flux at the planet centre rather than at each surface point.
+
+**Rules out:** Treating the lit hemisphere as half the world. `F·2R` as anything but a limit. Any
+axial-tilt parameter — a disc has no axis to tilt in a plane, and a parameter that must always be
+zero is an invitation to set it. Oblateness, which is now a ledger entry.
+
+**A finding from the breakup check:** it rejected the first test fixture written against it, at a
+rate 3.5× the limit. The check is not decoration — an unphysical world is easy to specify by
+accident.
+
+---
+
+### 24. Wrapping on a closed curve lives in one place, and comparison is circular distance
+
+**Decision:** `sim/periodic.py` owns `wrap`, `separation` and `distance`. Positions on the surface
+are compared by circular distance, never by subtraction.
+
+**Why:** the wrap subtlety had already produced two defects in two modules before this — the
+`fmod(fmod+b, b)` form quantising a micron at the period's ulp, and `%` returning exactly the period
+for a tiny negative. It appeared a third time in the rotation layer, which was the signal that it
+belongs in one place rather than being reimplemented per module.
+
+`separation` and `distance` exist because of a subtler failure: after exactly one sidereal day the
+phase lands 8.9e-16 short of a full turn, so the substellar point returns as `circumference - 1e-21`.
+Subtracting says it travelled the whole way round; on a closed curve it did not move at all. **Every
+comparison of surface positions must go through circular distance** — the water and life layers will
+need it constantly, since "how far apart are these two things" on a closed curve is the shorter way
+round and is never more than half the world.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
+- **`sim/rotation/`** — spin, the rotating surface frame, day and night, the terminator, and
+  insolation at a point on the ground. Vellum has a day.
 - **`sim/surface/`** — periodic multi-octave gradient noise plus an optional sampled residual.
   Exactly periodic, deterministic, evaluable at any resolution down to `C / 2**octaves`, with the
   floor reported rather than smoothed over.

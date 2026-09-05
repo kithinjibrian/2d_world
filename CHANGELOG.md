@@ -34,6 +34,12 @@ Never deleted. Older entries are never modified.
 - An abstraction ledger recording everything the project posits rather than derives, so a result
   that reflects a choice can never be mistaken for a finding about two-dimensional physics.
 
+### Added
+- **Vellum turns on itself, and so has a day.** A point on the surface now passes through daylight
+  and night as the world rotates, the terminator crosses the ground as two moving points rather
+  than a line, and how much of the world is lit depends on how close the star is — exactly a third
+  of it when Kell is twice the planet's radius away, tending to a half only from far off.
+
 ### Changed
 - The camera rolls to local vertical when you are on the ground, so the ground looks level wherever
   you stand on the world instead of tilting as you walk and turning upside down halfway round.

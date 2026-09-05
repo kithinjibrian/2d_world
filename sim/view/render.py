@@ -26,8 +26,10 @@ import pygame
 from numpy.typing import NDArray
 
 from sim.orbit import Trajectory
+from sim.rotation import Spin, is_lit
 from sim.star import Kell
 from sim.surface import Terrain
+from sim.units import LENGTH, Quantity
 from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
@@ -38,6 +40,8 @@ _INK: Final = (232, 236, 228)
 _DIM: Final = (96, 108, 100)
 _GOLD: Final = (198, 160, 70)
 _TEAL: Final = (74, 176, 158)
+_DAY: Final = (214, 196, 142)
+_NIGHT: Final = (44, 62, 60)
 
 #: Pixel coordinates handed to SDL are clipped to this box. SDL takes C ints,
 #: so a coordinate far outside the viewport must never reach it -- see the
@@ -202,10 +206,20 @@ class TerrainTrace:
         {ScaleBand.GROUND, ScaleBand.REGIONAL, ScaleBand.PLANETARY}
     )
 
-    def __init__(self, planet: Disc, terrain: Terrain, samples: int = 900) -> None:
+    def __init__(
+        self,
+        planet: Disc,
+        terrain: Terrain,
+        samples: int = 900,
+        spin: Spin | None = None,
+    ) -> None:
         self._planet = planet
         self._terrain = terrain
         self._samples = samples
+        self._spin = spin
+        #: Simulation time, set by the caller each frame. Only used to decide
+        #: which part of the ground is in daylight.
+        self.time = 0.0
 
     def visible_arc(self, camera: Camera) -> NDArray[np.float64]:
         """Return the surface positions this camera can see."""
@@ -229,6 +243,23 @@ class TerrainTrace:
         )
         return self._terrain.height(arc, resolution=resolution)
 
+    def lit_mask(self, camera: Camera) -> NDArray[np.bool_]:
+        """Return which sampled points are in daylight.
+
+        All of them when the world does not turn -- which, before the rotation
+        layer existed, was the whole surface all the time.
+        """
+        arc = self.visible_arc(camera)
+        if self._spin is None:
+            return np.ones(arc.shape, dtype=bool)
+        planet = self._planet
+        # Kell sits at the origin, so the star lies this way from the planet.
+        star_angle = math.atan2(-planet.centre_y, -planet.centre_x)
+        distance = Quantity(math.hypot(planet.centre_x, planet.centre_y), LENGTH)
+        return np.asarray(
+            is_lit(self._spin, arc, self.time, star_angle, distance), dtype=bool
+        )
+
     def draw(self, camera: Camera, target: object) -> None:
         surface = cast(pygame.Surface, target)
         arc = self.visible_arc(camera)
@@ -238,5 +269,22 @@ class TerrainTrace:
             _point((x, y))
             for x, y in zip(np.asarray(xs), np.asarray(ys), strict=True)
         ]
-        if len(points) > 1:
+        if len(points) < 2:
+            return
+        if self._spin is None:
             pygame.draw.aalines(surface, _TEAL, False, points)
+            return
+        # Split into runs of day and night and draw each in its own colour, so
+        # the terminator is visible as the boundary between them.
+        lit = self.lit_mask(camera)
+        start = 0
+        for index in range(1, len(points)):
+            if lit[index] != lit[start]:
+                pygame.draw.aalines(
+                    surface, _DAY if lit[start] else _NIGHT, False,
+                    points[start : index + 1],
+                )
+                start = index
+        pygame.draw.aalines(
+            surface, _DAY if lit[start] else _NIGHT, False, points[start:]
+        )

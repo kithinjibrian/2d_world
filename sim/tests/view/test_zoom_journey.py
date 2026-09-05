@@ -58,27 +58,27 @@ def journey(circumference: float) -> list[Camera]:
 
 class TestTheWholeRangeIsReachable:
     def test_every_band_is_visited(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, _, planet, _ = world
+        _, _, planet, _, _ = world
         bands = {c.band for c in journey(planet.circumference)}
         assert bands == set(ScaleBand), f"never reached {set(ScaleBand) - bands}"
 
     def test_ground_is_reachable(self, world) -> None:  # type: ignore[no-untyped-def]
         # The defect: zoom limits were absolute px-per-world-unit constants,
         # so on a world whose orbit is 1.0 the deepest zoom was still REGIONAL.
-        _, _, planet, _ = world
+        _, _, planet, _, _ = world
         assert any(c.band is ScaleBand.GROUND for c in journey(planet.circumference))
 
     def test_zoom_can_go_below_the_terrain_floor(self, world) -> None:  # type: ignore[no-untyped-def]
         # Otherwise "below terrain detail" could never be reported, and the
         # honesty about the resolution floor would be untestable.
-        _, _, planet, terrain = world
+        _, _, planet, terrain, _ = world
         assert any(
             terrain.is_clamped_at(c.metres_per_pixel)
             for c in journey(planet.circumference)
         )
 
     def test_terrain_has_detail_throughout_the_ground_band(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, _, planet, terrain = world
+        _, _, planet, terrain, _ = world
         entering_ground = next(
             c for c in journey(planet.circumference) if c.band is ScaleBand.GROUND
         )
@@ -96,12 +96,12 @@ class TestNothingSwallowsTheView:
         some background survives catches any drawable that paints the viewport
         edge to edge.
         """
-        star, trajectory, planet, terrain = world
+        star, trajectory, planet, terrain, spin = world
         surface = pygame.Surface((WIDTH, HEIGHT))
         for camera in journey(planet.circumference):
             focused = _camera_for(camera, planet, following=True, anchor=0.0)
             surface.fill(BACKGROUND)
-            _rebuild(star, trajectory, planet, terrain).draw(focused, surface)
+            _rebuild(star, trajectory, planet, terrain, spin).draw(focused, surface)
             pixels = pygame.surfarray.array3d(surface)
             is_background = np.all(pixels == np.array(BACKGROUND), axis=2)
             assert is_background.any(), (
@@ -118,7 +118,7 @@ class TestFollowingLandsOnTheGround:
         than the viewport that puts the ground thousands of pixels away, so
         zooming in showed empty space where the world should be.
         """
-        _, _, planet, _ = world
+        _, _, planet, _, _ = world
         for camera in journey(planet.circumference):
             if camera.span > planet.circumference:
                 continue  # planet still fits; centring on it is right

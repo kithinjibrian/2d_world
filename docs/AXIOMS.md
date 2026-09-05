@@ -249,6 +249,28 @@ and must be found — do not adjust the result.
   This has a direct computational consequence — see ARCHITECTURE RULES in `CLAUDE.md`.
 - **A barrier across the line partitions the world**, not a landscape. There is no route around.
 
+### Rotation and illumination *(from T0.1, T0.2, T2.2)*
+
+- **Angular momentum is a signed scalar**, not a vector: there is no axis in the plane for it to
+  point along. A disc still rotates — every point moves on a circle *within* the plane — but the
+  quantity describing it has no direction.
+- **The moment of inertia of a uniform disc is `MR²/2`**, identical to the three-dimensional
+  coefficient even though the density integrated is per area rather than per volume. Another case
+  where two dimensions leave the answer alone.
+- **The terminator is two points, not a curve.** In 3D it is a great circle; on a closed surface
+  curve, day and night are two arcs meeting at two points.
+- **The lit fraction is `arccos(R/d)/π`**, tending to exactly one half only for a distant star. At
+  `d/R = 10` it is 0.468, and at `d/R = 2` it is exactly one third — the "half the world is lit"
+  intuition is a distant-star approximation and is wrong by a third when the star is close.
+- **A planet flies apart when its surface moves at orbital speed.** Breakup is `ω = √(G₂M)/R`, so
+  the surface speed there is `√(G₂M) = v_c` — and since circular speed in two dimensions is the same
+  at every radius, that is the speed of an orbit *anywhere* in the system.
+- **Intercepted power is `L·arcsin(R/d)/π`, exactly.** A convex body subtends `2·arcsin(R/d)` at a
+  point source, and integrating `F(r)·cos(incidence)` around the lit arc reproduces it to six
+  figures. Exact rather than asymptotic, unlike the `F·2R` cross-section form it tends to.
+- **There is no axial tilt and there cannot be one**, so there are no obliquity seasons. Seasons come
+  from eccentricity alone, as recorded above.
+
 ### Statistics *(from T0.1)*
 
 - **Random walks in 2D are recurrent** — a diffusing particle returns to its origin with probability
@@ -271,6 +293,7 @@ it is asked for something it cannot honestly supply, rather than returning a pla
 | Constitutive relations (T2.1, T2.3, T2.4) | Effective theories require them by construction | Viscosity, specific heats, stiffness are chosen | Only if a value turns out to matter qualitatively |
 | Non-relativistic regime (T0.3) | Assumed, not checked | Invalid if any derived speed approaches a signal speed | Once orbital speeds are known |
 | Kell's luminosity (T2.2) | DECISION-010 — stubbed to reach the surface layers sooner | Stellar output is a swept parameter, so no climate result is a finding about stellar physics | Once the scan shows which luminosities matter — the map makes the derivation better targeted |
+| Oblateness (T2.4) | A spinning body bulges; modelling that needs the material response abstracted at T2.4 | The planet stays exactly circular however fast it turns, so no result about its shape is a finding | If material response is ever modelled |
 | Terrain statistics (T2.4) | Nothing here predicts a roughness exponent; deriving one needs tectonics and erosion, which are not modelled | The shape of the ground is chosen, so no result about mountains, basins or slopes is a finding about 2D physics | If tectonics or erosion are ever modelled, at which point roughness becomes an output |
 
 ---

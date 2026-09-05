@@ -11,6 +11,7 @@ Controls
     scroll / + -    zoom about the cursor, on the ground too
     arrow keys      pan; left/right walks along the ground when zoomed in
     [ ]             step along Vellum's orbit
+    space           run or pause time -- watch the world turn
     f               follow Vellum (default) or hold position
     home            reframe the whole system
     esc / q         quit
@@ -30,6 +31,7 @@ import numpy as np
 import pygame
 
 from sim.orbit import Trajectory, circular_speed, integrate
+from sim.rotation import Spin, breakup_rate
 from sim.star import Kell
 from sim.surface import Terrain
 from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
@@ -43,11 +45,12 @@ __all__ = ["main", "run"]
 _BACKGROUND = (14, 18, 16)
 _ZOOM_STEP = 1.25
 _PAN_FRACTION = 0.08
+_TIMESTEP = 2e-3
 _MIN_WIDTH = 960
 _MIN_HEIGHT = 600
 
 
-def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
+def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain, Spin]:
     """Build the world there is to look at so far.
 
     A star, an orbit, a disc, and ground. Water, air and life do not exist
@@ -82,7 +85,13 @@ def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
         # closest zoom showed invented smoothness.
         octaves=34,
     )
-    return star, trajectory, planet, terrain
+    # WORLD CONSTANT: a rotation rate, about a third of breakup, giving
+    # roughly a hundred days to the orbit. Not derived -- see DECISION on the
+    # rotation layer and docs/AXIOMS.md section 4.
+    mass = Quantity(3.0e-6, MASS)
+    spin = Spin(rate=100.0, circumference=planet.circumference, mass=mass)
+    assert spin.rate < breakup_rate(mass, planet.circumference)
+    return star, trajectory, planet, terrain, spin
 
 
 def _default_size() -> tuple[int, int]:
@@ -106,7 +115,7 @@ def run(width: int | None = None, height: int | None = None) -> None:
     surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     clock = pygame.time.Clock()
 
-    star, trajectory, planet, terrain = _demo_world()
+    star, trajectory, planet, terrain, spin = _demo_world()
     scene = _rebuild(star, trajectory, planet, terrain)
 
     camera = Camera(
@@ -125,6 +134,8 @@ def run(width: int | None = None, height: int | None = None) -> None:
     #: Height above that point. Dragging vertically on the ground changes it.
     anchor_height = 0.0
     dragging = False
+    #: Whether time advances on its own. Watching the world turn needs it.
+    running_clock = True
 
     while running:
         for event in pygame.event.get():
@@ -158,11 +169,15 @@ def run(width: int | None = None, height: int | None = None) -> None:
                     _ZOOM_STEP if event.button == 4 else 1.0 / _ZOOM_STEP,
                     float(mx), float(my),
                 )
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                running_clock = not running_clock
             elif event.type == pygame.KEYDOWN:
                 camera, step, following, running, anchor = _on_key(
                     event.key, camera, step, following, running, planet, width, anchor
                 )
 
+        if running_clock:
+            step += 1
         # The planet moves along its orbit; the viewer only reads the state.
         position = trajectory.positions[step % len(trajectory.positions)]
         planet = Disc(
@@ -170,7 +185,7 @@ def run(width: int | None = None, height: int | None = None) -> None:
             centre_y=float(position[1]),
             circumference=planet.circumference,
         )
-        scene = _rebuild(star, trajectory, planet, terrain)
+        scene = _rebuild(star, trajectory, planet, terrain, spin, step * _TIMESTEP)
         looking = _camera_for(camera, planet, following, anchor, anchor_height)
 
         surface.fill(_BACKGROUND)
@@ -289,13 +304,20 @@ def _camera_for(
 
 
 def _rebuild(
-    star: Kell, trajectory: Trajectory, planet: Disc, terrain: Terrain
+    star: Kell,
+    trajectory: Trajectory,
+    planet: Disc,
+    terrain: Terrain,
+    spin: Spin | None = None,
+    time: float = 0.0,
 ) -> Scene:
     scene = Scene()
     scene.add(StarDisc(star))
     scene.add(OrbitTrace(trajectory))
     scene.add(PlanetDisc(planet))
-    scene.add(TerrainTrace(planet, terrain))
+    ground = TerrainTrace(planet, terrain, spin=spin)
+    ground.time = time
+    scene.add(ground)
     scene.add(ScaleBar(terrain))
     return scene
 
