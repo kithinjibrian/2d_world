@@ -1408,6 +1408,12 @@ None, but MEMORY.md decision 22 records planetary rotation as a known gap needin
 
 ---
 
+## SESSION 17 — 2026-09-05 — Rotation layer PRP — open
+
+Branch: sim/rotation-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
