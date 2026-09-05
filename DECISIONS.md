@@ -12,6 +12,37 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
+### DECISION-017 — Is terrain a raster, or a field evaluable at any resolution?
+
+**Status:** open
+**Raised:** 2026-09-05 — Session 10
+**Resolved by:** human
+**Blocks:** The surface layer, which has no PRP yet. Does not block the viewer skeleton, but the
+viewer is what makes the question urgent — it will be asking for terrain at eleven different scales.
+
+**Question:** When the surface layer is built, is `h(x)` stored as a sampled array, or represented so
+it can be evaluated at arbitrary position and arbitrary resolution?
+
+**Options:**
+- A) **An evaluable field — spectral synthesis.** `h(x)` as a sum of sinusoids at integer wavenumbers.
+  Periodicity on the closed surface is then exact by construction rather than stitched, and the
+  viewer can regenerate detail at whatever zoom it is at, from a few thousand coefficients, exactly
+  consistent with the simulation. Zoom becomes free and needs no LOD pyramid and no streaming.
+- B) **A sampled raster.** Simpler to reason about and to modify in place (erosion, deposition, an
+  impact crater). But it fixes a resolution forever: below the sample spacing there is nothing to
+  show, and above it the viewer needs a mipmap pyramid. Periodicity has to be enforced rather than
+  guaranteed.
+- C) **Both** — a spectral base field plus a sampled residual for anything that modifies the ground
+  after generation.
+
+**Notes:** Recommend C if the surface is ever eroded or cratered, A otherwise. The distinction is not
+cosmetic: a raster forfeits arbitrary zoom permanently, and the viewer is the reason to decide before
+the surface layer is written rather than after. Note that a desktop viewer shares the simulation's
+process (DECISION-016), so there is no serialisation boundary — an evaluable field costs nothing to
+"ship", it is simply called.
+
+---
+
 ### DECISION-012 — What counts as habitable?
 
 **Status:** open
@@ -193,6 +224,46 @@ to derive the star from, because by then there will be a map showing which lumin
   evolution. It never returns a plausible default. A stub that answers everything is never revisited.
 - Any result depending on it is reported as a consequence of a chosen parameter, not a finding about
   two-dimensional physics.
+
+**Copied to MEMORY.md:** yes
+
+---
+
+### DECISION-016 — A viewer, and the dependency it needs
+
+**Status:** resolved
+**Raised:** 2026-09-05 — Session 10
+**Resolved:** 2026-09-05 — Session 10
+
+**Question:** The user wants to zoom continuously from the whole system down to the planet's ground.
+Where does that render, and when is it built? The STACK in CLAUDE.md is closed, so a rendering
+dependency is a decision rather than an implementation detail.
+
+**Outcome:** A **desktop window using `pygame-ce`**, built as a **skeleton now** and grown as each
+layer lands. `pygame-ce` is added to STACK; it is the first dependency added since the project
+began.
+
+**Rationale:** User direction on both forks. `pygame-ce` over `pyglet` because pyglet is OpenGL-based
+and its pipeline is float32, which fights the central difficulty here — spanning eleven orders of
+magnitude from system scale to ground demands float64 throughout. With SDL2 all camera arithmetic
+stays in Python floats and only integer pixels reach the renderer, so precision is a Python concern
+and stays solvable.
+
+Building the skeleton before the layers it will display is deliberate: every subsequent layer becomes
+visible the moment it lands, so terrain, water and air get looked at while they are being built
+rather than afterwards. For a project whose entire subject is what a two-dimensional world looks
+like, that feedback is worth more than the throwaway iterations it costs.
+
+**Consequences:**
+- STACK gains `pygame-ce`. The list is closed again after it.
+- The viewer's logic must be **testable headless** — the camera and transforms are pure functions
+  with no pygame import, and the drawing layer stays thin enough to be trivially correct.
+  `SDL_VIDEODRIVER=dummy` covers what remains.
+- Rendering must be **camera-relative**. Never transform an absolute world coordinate: at a focus
+  1e11 m from the origin, a metre of detail is below float64's resolution of the absolute value but
+  well within it for a relative one.
+- It raises DECISION-017: terrain must be decided as a raster or an evaluable field before the
+  surface layer is written.
 
 **Copied to MEMORY.md:** yes
 

@@ -308,6 +308,31 @@ real test.
 
 ---
 
+### 17. The viewer is a skeleton built before what it will show
+
+**Decision:** A desktop viewer using `pygame-ce`, built now against Kell and the orbit, and grown as
+each layer lands (DECISION-016). Camera logic is pure and headless-testable; only the drawing and
+event loop touch a display.
+
+**Why:** For a project whose whole subject is what a two-dimensional world looks like, being able to
+see it is not a luxury at the end — it is feedback on every layer while that layer is being written.
+The cost is some throwaway iteration; the alternative is building five layers without ever looking
+at any of them.
+
+`pygame-ce` over `pyglet` because pyglet is OpenGL and its pipeline is float32. Spanning system scale
+to ground scale is eleven orders of magnitude, which needs float64 throughout — with SDL2 the
+arithmetic stays in Python and only integer pixels reach the renderer.
+
+**Rules out:** Any GPU path. A `World` aggregate invented from two layers. Computing anything in the
+viewer — it draws what the simulation produced, or the picture is evidence of nothing.
+
+**The rule that will be quietly violated if it is not written down:** render camera-relative,
+`(world − focus) * scale`, never `world * scale`. At a focus 1e11 m from the origin a metre of detail
+is below float64's resolution of the absolute coordinate and comfortably inside it for the relative
+one.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
@@ -328,6 +353,7 @@ real test.
 - Nothing. The orbit layer is complete; the next layer has no PRP yet.
 
 ### Not Started
+- The viewer. `PRPs/viewer-layer.md` is written and awaits approval.
 - planet, surface, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
   deferred out of the orbit layer and need one.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate

@@ -822,9 +822,77 @@ None.
 
 ---
 
-## SESSION 10 — 2026-09-05 — Viewer PRP — open
+## SESSION 10 — 2026-09-05 — Viewer PRP — closed
 
 Branch: sim/viewer
+
+### WHAT WAS DONE
+
+User asked to be able to zoom from the whole system down to the planet's ground. Ran the discovery,
+recorded two decisions, and wrote `PRPs/viewer-layer.md`. No code — it awaits approval.
+
+**Why this is unusually cheap in a two-dimensional world.** Three properties already established
+make the viewer far easier than its 3D equivalent. Culling is two binary searches, because ground
+bodies are held in an array sorted by surface position and the first law guarantees that order never
+changes — no quadtree, no spatial index. Terrain level-of-detail is 1D mipmapping, since `h(x)` is a
+single periodic array. And there is no projection at all: the camera is a window on a plane. The
+viewer will be the first thing to actually exploit the sorted-order invariant recorded in MEMORY.md
+decision 8.
+
+There is also no seam between regimes. Surface position maps to the plane as `θ = 2πx/L`, `r = R+h`,
+so a stretch of ground looking straight and the world closing into a circle are the same
+representation at different zooms, not two cases.
+
+**The hard part is precision, not graphics.** System scale to ground is eleven orders of magnitude.
+Float64 carries ~15–16 digits, so the transform must be camera-relative — `(world − focus) * scale`,
+never `world * scale`. At a focus 1e11 m from the origin, a metre of detail is below float64's
+resolution of the absolute coordinate and comfortably inside it for the relative one. This is
+recorded as an architecture rule, a MEMORY entry, and a discriminating test whose failure under an
+absolute transform must be demonstrated rather than assumed.
+
+**A finding that binds a layer not yet written.** The viewer will ask for terrain at eleven different
+scales. If `h(x)` is a sampled raster, that fixes a resolution forever and forfeits arbitrary zoom;
+if it is an evaluable field — spectral synthesis, a sum of sinusoids at integer wavenumbers — the
+viewer regenerates detail at whatever zoom it is at, exactly consistent with the simulation, with no
+pyramid and no streaming. Spectral synthesis also makes periodicity on the closed surface exact by
+construction rather than stitched. Opened as DECISION-017 so the surface layer is written knowing it.
+
+### DECISIONS MADE
+
+- **DECISION-016 resolved.** A desktop viewer with `pygame-ce`, skeleton now, grown per layer. Both
+  forks were the user's: desktop over an HTML canvas, and now over waiting.
+  `pygame-ce` over `pyglet` because pyglet is OpenGL and float32 through the pipeline, which fights
+  the only genuinely hard requirement here. Verified both are installable and that this machine has
+  a display before writing a PRP resting on either.
+- `pygame-ce` added to STACK — the first dependency added since the project began. CLAUDE.md now
+  states explicitly that the list is closed again.
+
+### PENDING DECISIONS OPENED
+
+- **DECISION-017 — is terrain a raster or an evaluable field?** Blocks the surface layer, not the
+  viewer. Recommendation: a spectral base field, plus a sampled residual if the ground is ever
+  eroded or cratered.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/viewer-layer.md   — NEW. Awaits approval
+    DECISIONS.md           — 016 resolved, 017 opened
+    CLAUDE.md              — pygame-ce added to STACK; new architecture rule 7 (the viewer draws,
+                             never computes; render camera-relative)
+    MEMORY.md              — decision 17
+    CONTEXT.md             — this entry
+
+### TESTS WRITTEN
+
+None — not approved. The test list is the substance of the PRP, and every test in it runs headless:
+`camera.py` imports no pygame, and what remains uses `SDL_VIDEODRIVER=dummy`. A viewer is normally
+hard to test; here it need not be, because almost all the difficulty is in pure coordinate maths.
+
+### STILL OPEN AT CLOSE
+
+- `PRPs/viewer-layer.md` awaits approval. Branch `sim/viewer` unmerged, unpushed.
+- DECISION-012, -013, -014, -017 all open.
+- The planet layer and the debris/impact layer both still need PRPs.
 
 ---
 
@@ -832,24 +900,17 @@ Branch: sim/viewer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
+`PRPs/viewer-layer.md`.
 
-The orbit layer is complete and green on branch `sim/orbit-layer`, unmerged. Merge it to `main`
-before starting new work, or branch from it.
+**If the viewer PRP is approved, implement it test-first** on branch `sim/viewer`. Keep the split
+strict: `camera.py` is pure and holds nearly all the logic, `render.py` and `app.py` stay thin
+enough to be obviously correct. The acceptance criterion most easily skipped is the one that matters
+— make the transform absolute instead of camera-relative and confirm the precision test goes red.
 
-Two candidates for the next PRP:
+After that, the planet layer is the natural next physics, and DECISION-012 needs answering before
+any scan can mean anything.
 
-- **The planet layer** — Vellum as a body: surface gravity, atmospheric column, thermal equilibrium
-  under `T³` emission and `1/r` insolation. Recommended, because it moves toward the scan and
-  because DECISION-012 needs a concrete habitability predicate before a sweep can mean anything.
-- **Debris and the impact cycle** — deferred out of the orbit layer. The natural continuation of the
-  sky. Whether it is N-body or statistical is itself worth a decision entry.
-
-Carry one lesson from Session 9 into whichever comes next: **mutate the physics and re-run before
-believing a justification.** Two claims that survived a PRP review and a full implementation failed
-their first real test — the boundedness demonstration and the reason for requiring a symplectic
-integrator. Both are recorded in MEMORY.md decision 16 and in the PRP's FINDING note.
-
-Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
+Environment: `.venv/`. `pygame-ce` is not yet installed; the viewer PRP adds it.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

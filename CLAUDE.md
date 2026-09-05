@@ -333,8 +333,12 @@ adding to it is a decision, not an implementation detail.
 - `scipy` — integrators, FFT, optimisation
 - `matplotlib` — plate generation, SVG output
 - `pytest`, `mypy`, `ruff`
+- `pygame-ce` — the viewer only (DECISION-016). SDL2 rather than OpenGL, so all camera arithmetic
+  stays in Python float64 and only integer pixels reach the renderer. A GPU pipeline would be
+  float32, which defeats the point of spanning eleven orders of magnitude.
 
-No game engine, no ECS library, no simulation framework, no notebook-driven development. The
+**The list is closed.** Adding to it is a decision with a DECISIONS.md entry, not an implementation
+detail. No game engine, no ECS library, no simulation framework, no notebook-driven development. The
 computation is array math on periodic domains; a framework would add indirection and no capability.
 
 **Monograph** — unchanged:
@@ -368,15 +372,20 @@ computation is array math on periodic domains; a framework would add indirection
    `σ₂ = 1`, with a chosen reference mass and length fixing the rest. No physical constant enters
    the codebase except through the units layer, and no SI value appears outside the display layer.
    See `docs/AXIOMS.md` §2.
-7. **Derived layers depend downward only.** Star → orbit → planet → surface → water → air → life.
+7. **The viewer draws; it never computes.** `sim/view/` performs no physics, no integration and no
+   derivation — it displays what other layers produce. A viewer that computes can disagree with the
+   simulation, and then the picture is evidence of nothing. It also renders **camera-relative**,
+   never from the absolute origin: at a focus 1e11 m out, a metre of detail survives the relative
+   transform and is lost in the absolute one.
+8. **Derived layers depend downward only.** Star → orbit → planet → surface → water → air → life.
    A lower layer never reads from a higher one. If it needs to, the layering is wrong — stop and
    open a decision.
-8. **Every layer runs at two fidelities.** A world is chosen by scanning a grid of dimensionless
+9. **Every layer runs at two fidelities.** A world is chosen by scanning a grid of dimensionless
    ratios (DECISION-009), so each layer needs a cheap screening path evaluated over the whole grid
    as well as the full solve for a chosen point. A layer supporting only the full solve cannot be
    scanned, and retrofitting a screening path means rewriting it. Design both at once, and state in
    the PRP what the screening model neglects and why that is safe for pruning.
-9. **Scan results are a versioned data product.** A scan is stamped with the code version and the
+10. **Scan results are a versioned data product.** A scan is stamped with the code version and the
    parameter grid that produced it. A scan run against changed physics is a different scan, not an
    update of the old one — never merge them, and never compare across versions without saying so.
 
