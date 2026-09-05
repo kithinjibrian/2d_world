@@ -1716,9 +1716,71 @@ None.
 
 ---
 
-## SESSION 21 — 2026-09-06 — Single-point polyline crash — open
+## SESSION 21 — 2026-09-06 — Single-point polyline crash — closed
 
 Branch: fix/terrain-runs
+
+### WHAT WAS DONE
+
+The viewer crashed on the user's machine: `ValueError: points argument must contain 2 or more
+points`, from the day/night split in `TerrainTrace.draw`.
+
+**The cause.** Splitting the ground into lit and unlit runs was inline index juggling. It drew
+`points[start:index+1]` on each change and `points[start:]` at the end — and when the last sample
+flipped, that trailing slice held exactly one point. Reproduced immediately once written out:
+
+    mask=DDDDD  trailing run has 5 points
+    mask=DDDDn  trailing run has 1 point   <-- crash
+    mask=DnDnD  trailing run has 1 point   <-- crash
+
+**Why no test caught it, which is the interesting part.** The logic lived inside a `draw` method, so
+it could only be exercised by rendering. And rendering does not sample the input space — it samples
+one trajectory through it. A sweep of **516 frames across six zoom levels produced 239 visible
+terminators and not a single single-sample run.** Driving more frames would not have found this;
+relying on that would have shipped it again.
+
+**The fix is the extraction.** `sim.view.geometry.contiguous_runs` is a pure function returning
+`(start, stop, value)` per run. Tested with seven table-driven cases including every degenerate
+shape, plus property tests that runs tile the mask without gap or overlap and that neighbours always
+differ. The crashing case is now one line of input rather than an unreachable rendering state. The
+draw path is tested separately against forced masks, because what matters there is that drawing does
+not raise.
+
+Both halves confirmed by reversion: removing the length guard fails 2 tests.
+
+**The breakup check rejected a third fixture.** Writing the render test, I gave the spin a rate of
+10.0 against a breakup of 0.0315. Every spin written this project without doing the arithmetic has
+been unphysical, and the check has caught every one.
+
+### FILES CREATED OR MODIFIED
+
+    sim/view/geometry.py            — contiguous_runs
+    sim/view/render.py              — TerrainTrace.draw uses it, and guards short segments
+    sim/tests/view/test_runs.py     — NEW. The segmentation, including every degenerate shape
+    sim/tests/view/test_render.py   — the draw path against forced masks
+    MEMORY.md (decision 27), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+447 total, 20 new. Table-driven segmentation across seven shapes; empty mask; runs tile without gap
+or overlap; neighbouring runs differ; each run reports the value it covers; and the draw path
+against six forced masks — all day, all night, a flip on the last sample, a flip on the first, every
+sample flipping, and one terminator in the middle.
+
+### DECISIONS MADE
+
+- Non-trivial logic does not live inside a `draw` method.
+- Rendering many frames is not coverage of a rendering edge case.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `fix/terrain-runs` unmerged, unpushed.
+- The ground is still a thin line rather than filled.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1728,16 +1790,17 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-Branch `feat/viewer-sidebar` is unmerged. Merge it first, then run the viewer: click **Vellum** in
-the sidebar to be taken to it, scroll in to reach the ground, and press `space` to watch day and
-night cross.
+Branch `fix/terrain-runs` is unmerged. Merge it first.
 
 **The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
 follow from having no third direction. The first layer that can produce a number the monograph only
 guessed — the basin count. Use `sim.periodic.distance` for anything comparing surface positions.
 
+Carry the Session 21 lesson: **logic inside a `draw` method cannot be tested, so it should not be
+there.** 516 rendered frames produced 239 terminators and never the shape that crashed. Rendering
+samples one trajectory through the input space, not the space.
+
 Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
-And the ground is drawn as a thin line, which will matter more once water is drawn against it.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

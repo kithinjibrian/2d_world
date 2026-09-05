@@ -545,6 +545,31 @@ the real one raises by design.
 
 ---
 
+### 27. Logic inside a draw method cannot be tested, so it should not be there
+
+**Decision:** Segmenting the ground into day and night runs lives in
+`sim.view.geometry.contiguous_runs`, a pure function, not as index juggling inside
+`TerrainTrace.draw`.
+
+**Why:** the inline version shipped a crash. When the last sample flipped, the trailing run held a
+single point, and a polyline through one point raises. It could only be exercised by rendering, and
+rendering never happened to place a terminator on the final sample — a sweep of **516 frames across
+six zoom levels produced 239 visible terminators and not one single-sample run**. Relying on
+rendering to find it would have shipped it a second time.
+
+Extracted, it takes seven table-driven cases and two property tests, and the crashing shape is one
+line of input. The draw path is separately tested against forced masks, since the property that
+matters is that drawing does not raise, not that the segmentation is right.
+
+**Rules out:** Non-trivial logic inside a `draw` method. Treating "it renders without crashing
+across many frames" as coverage of a rendering edge case — the frames are not a sample of the
+input space, they are a sample of one trajectory through it.
+
+**A note on the breakup check:** it rejected a third test fixture this session. Every time a spin has
+been written without doing the arithmetic, it has been unphysical. The check earns its place.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working

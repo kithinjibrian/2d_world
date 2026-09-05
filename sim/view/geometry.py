@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import TypeAlias
 
 import numpy as np
@@ -20,7 +21,16 @@ from numpy.typing import NDArray
 
 from sim.periodic import wrap
 
-__all__ = ["Coordinate", "Disc", "add", "mod", "mul", "sub", "visible_surface_indices"]
+__all__ = [
+    "Coordinate",
+    "Disc",
+    "add",
+    "contiguous_runs",
+    "mod",
+    "mul",
+    "sub",
+    "visible_surface_indices",
+]
 
 #: A scalar or an array of them. Never carries units.
 Coordinate: TypeAlias = float | NDArray[np.float64]
@@ -141,3 +151,38 @@ def mod(a: Coordinate, b: float) -> Coordinate:
     after the same subtlety bit twice in two modules.
     """
     return wrap(a, b)
+
+
+def contiguous_runs(mask: NDArray[np.bool_]) -> list[tuple[int, int, bool]]:
+    """Split a boolean mask into maximal runs of equal value.
+
+    Returns ``(start, stop, value)`` with `stop` exclusive, tiling the mask with
+    no gap and no overlap, and with neighbouring runs always differing.
+
+    Exists because doing this inline shipped a crash: when the last sample
+    flipped, the trailing run held a single element, and drawing a polyline
+    through one point raises. Inline index juggling could only be exercised by
+    rendering, and rendering never happened to put a terminator on the final
+    sample.
+
+    Parameters
+    ----------
+    mask : NDArray[np.bool_]
+        Values to segment.
+
+    Returns
+    -------
+    list[tuple[int, int, bool]]
+        One entry per run. Empty for an empty mask.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> contiguous_runs(np.array([True, True, False]))
+    [(0, 2, True), (2, 3, False)]
+    """
+    if mask.size == 0:
+        return []
+    changes = np.flatnonzero(np.diff(mask.astype(np.int8))) + 1
+    bounds = [0, *changes.tolist(), int(mask.size)]
+    return [(start, stop, bool(mask[start])) for start, stop in pairwise(bounds)]

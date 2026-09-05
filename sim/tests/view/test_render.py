@@ -14,6 +14,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from sim.orbit import circular_speed, integrate
+from sim.rotation import Spin
 from sim.star import Kell
 from sim.surface import Terrain
 from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
@@ -132,3 +133,58 @@ class TestTerrainTrace:
         trace = TerrainTrace(PLANET, self.TERRAIN)
         heights = trace.sample_heights(camera)
         assert float(np.std(heights)) > 0.0
+
+
+class TestTerminatorOnTheLastSample:
+    """The exact shape that crashed, driven through the real draw path.
+
+    A sweep of 516 rendered frames did not produce a single-sample run, so
+    relying on rendering to find this would have shipped it again. The mask is
+    forced instead.
+    """
+
+    TERRAIN = Terrain(
+        circumference=PLANET.circumference,
+        amplitude=PLANET.circumference * 1e-3,
+        roughness=2.0,
+        seed=11,
+        octaves=12,
+    )
+
+    def _trace(self, mask: list[bool]) -> TerrainTrace:
+        # Well under breakup for this mass and circumference; the check has
+        # now rejected three fixtures written without doing the arithmetic.
+        spin = Spin(
+            rate=0.01, circumference=PLANET.circumference,
+            mass=Quantity(1e-9, MASS),
+        )
+        trace = TerrainTrace(PLANET, self.TERRAIN, samples=len(mask), spin=spin)
+        trace.lit_mask = lambda camera: np.array(mask, dtype=bool)  # type: ignore[method-assign]
+        return trace
+
+    @pytest.mark.parametrize(
+        "mask",
+        [
+            [True] * 8,                       # all day
+            [False] * 8,                      # all night
+            [True] * 7 + [False],             # flip on the last sample -- the crash
+            [False] + [True] * 7,             # flip on the first
+            [True, False] * 4,                # every sample flips
+            [True] * 4 + [False] * 4,         # one terminator in the middle
+        ],
+    )
+    def test_draws_without_raising(self, surface, mask: list[bool]) -> None:  # type: ignore[no-untyped-def]
+        camera = Camera(
+            focus_x=PLANET.centre_x, focus_y=0.0, scale=1e6,
+            width=400, height=300, reference_length=PLANET.circumference,
+        )
+        surface.fill((0, 0, 0))
+        self._trace(mask).draw(camera, surface)
+
+    def test_a_single_sample_arc_is_not_drawn_rather_than_raising(self, surface) -> None:  # type: ignore[no-untyped-def]
+        camera = Camera(
+            focus_x=PLANET.centre_x, focus_y=0.0, scale=1e6,
+            width=400, height=300, reference_length=PLANET.circumference,
+        )
+        surface.fill((0, 0, 0))
+        self._trace([True]).draw(camera, surface)

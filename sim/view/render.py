@@ -33,7 +33,7 @@ from sim.surface import Terrain
 from sim.units import LENGTH, Quantity
 from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
-from sim.view.geometry import Disc
+from sim.view.geometry import Disc, contiguous_runs
 from sim.view.sidebar import PANEL_WIDTH, ROW_HEIGHT, TOP, Target
 
 __all__ = [
@@ -313,19 +313,17 @@ class TerrainTrace:
             pygame.draw.aalines(surface, _TEAL, False, points)
             return
         # Split into runs of day and night and draw each in its own colour, so
-        # the terminator is visible as the boundary between them.
+        # the terminator is visible as the boundary between them. Each run
+        # reaches one point into the next so the segments join up.
         lit = self.lit_mask(camera)
-        start = 0
-        for index in range(1, len(points)):
-            if lit[index] != lit[start]:
-                pygame.draw.aalines(
-                    surface, _DAY if lit[start] else _NIGHT, False,
-                    points[start : index + 1],
-                )
-                start = index
-        pygame.draw.aalines(
-            surface, _DAY if lit[start] else _NIGHT, False, points[start:]
-        )
+        for start, stop, is_day in contiguous_runs(lit):
+            segment = points[start : min(stop + 1, len(points))]
+            if len(segment) < 2:
+                # A run of one sample at the very end of the arc. Nothing to
+                # draw through a single point, and a polyline call with one
+                # point raises.
+                continue
+            pygame.draw.aalines(surface, _DAY if is_day else _NIGHT, False, segment)
 
 
 class Sidebar:
