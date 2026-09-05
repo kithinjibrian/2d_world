@@ -27,6 +27,11 @@ Never deleted. Older entries are never modified.
   effective theories with declared parameters.
 - The project works in natural units rather than SI. A world is characterised by dimensionless
   ratios, which is the only thing that was ever physically meaningful.
+- Those ratios are scanned rather than chosen: habitability is an output of a parameter sweep rather
+  than an assumption built into it, so every layer needs a cheap screening path as well as a full
+  solve.
+- Kell is stubbed behind its real interface — stellar luminosity is a swept parameter for now, and
+  deriving the star later collapses an axis of the scan rather than invalidating it.
 - The project is now a simulation that derives its own physics. `vellum-monograph.html` is
   reclassified from specification to prior hypothesis, and frozen — no simulation parameter may be
   tuned to reproduce a number in it.

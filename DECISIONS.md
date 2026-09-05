@@ -12,70 +12,67 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
-### DECISION-009 — Which dimensionless ratios define a world, and how are they chosen?
+### DECISION-012 — What counts as habitable?
 
 **Status:** open
-**Raised:** 2026-09-03 — Session 3. Reframed 2026-09-03 — Session 4.
+**Raised:** 2026-09-05 — Session 5
 **Resolved by:** human
-**Blocks:** Any world instantiation. Does not block the units layer or the axioms themselves.
+**Blocks:** The scan. DECISION-009 makes habitability the *output* of a parameter sweep, which is
+only meaningful once there is a criterion deciding which grid points count.
 
-**Question:** Session 4 settled the axiom tiers and adopted natural units, which dissolves the
-original form of this question. There is no longer a value of `G₂` or `σ₂` to choose — both are 1 by
-construction, and the reference mass and length fix the remaining scales (`docs/AXIOMS.md` §2). What
-is left is the only thing that was ever physical: **the dimensionless ratios that characterise a
-particular Vellum.**
+**Question:** Scanning for habitable worlds requires a predicate. What is it?
 
-Candidates: Kell's mass to Vellum's; orbital radius to planetary radius; atmospheric scale height to
-radius; thermal to gravitational binding energy; the atmosphere's Reynolds number.
+**Options:**
+- A) **Liquid water somewhere on the surface**, at some point in the orbit. Simplest, and it maps
+  directly onto the basins the terrain layer will produce.
+- B) **A stable surface temperature band** — habitable means the climate does not run away in either
+  direction over some interval. Harder, and it interacts with the `T³` emission law, which is a
+  weaker stabilising feedback than the 3D quartic and so makes runaway *more* likely. This is
+  arguably the more interesting criterion precisely because 2D climate is twitchier.
+- C) **An energy budget adequate for photosynthesis** at the surface, given `1/r` flux dilution.
+- D) A conjunction of the above.
 
-**9a — how are those ratios chosen?**
-- A) **Fixed by fiat, habitability discovered.** Pick a set, run, and find out whether a living world
-  is even possible. Honest, and the result means something — but there may be no Vellum at the end.
-- B) **Tuned so a habitable world exists.** Guarantees a world; costs the claim that it was found
-  rather than built.
-- C) **Scanned.** Treat habitability as output: sweep the ratios, map which regions give a stable lit
-  surface, then pick a world from inside that region and record why. Most work, best answer, and it
-  turns "why is Vellum like this" into a plot rather than an assertion.
+**Notes:** Recommend starting with A as a coarse screen (it is cheap and it prunes most of the grid)
+and layering B onto the survivors, since B is the expensive one and the one whose answer is not
+obvious in advance. C depends on abstracted radiation (`docs/AXIOMS.md` §4) and so cannot yet be a
+finding about 2D physics — it would be a consequence of a chosen parameter.
 
-**9b — is chemistry given any representation?** T1.3 abstracts matter entirely, so composition is
-currently a small set of bulk species with assumed properties. Confirm that is enough, or decide what
-minimal representation is needed.
-
-**9c — is radiative transfer grey or spectral?** Grey is far cheaper and adequate for a first
-climate; spectral is needed only if composition is ever to matter qualitatively. Given T1.2 abstracts
-electromagnetism, spectral transfer would be false precision on top of a posited layer — grey is
-probably right until that changes.
-
-**Notes:** 9a is the real fork, and it is philosophical as much as technical: one direction makes
-Vellum found, the other makes it designed. Recommend C — the habitability map is itself one of the
-more interesting results available, and it is the only option that makes the answer falsifiable.
+The criterion must be recorded as a **world-selection predicate, not an axiom.** It says which
+worlds are interesting to us; it says nothing about which worlds exist.
 
 ---
 
-### DECISION-010 — Derive Kell, or stub its luminosity?
+### DECISION-013 — Does chemistry get any representation?
 
 **Status:** open
-**Raised:** 2026-09-03 — Session 3
+**Raised:** 2026-09-03 — Session 3 (as DECISION-009b). Split out 2026-09-05 — Session 5.
 **Resolved by:** human
-**Blocks:** The build order after the units layer. Does not block the units layer itself.
+**Blocks:** Anything where composition matters qualitatively — atmospheric evolution in particular.
 
-**Question:** Is the star derived from stellar structure in 2D, or treated as a boundary condition
-with an assumed luminosity so the planet can be built sooner?
+**Question:** T1.3 abstracts matter's microstructure entirely, so composition is currently a small
+set of bulk species with assumed properties. Is that enough?
 
-**Options:**
-- A) **Derive Kell first.** 2D hydrostatic equilibrium and radiative transport under `T³`, producing
-  luminosity, radius, and lifetime as results. Nothing downstream rests on an invented constant, and
-  a 2D star is genuinely unexplored territory. Roughly a week before anything looks like a world.
-- B) **Stub the luminosity, build the planet, derive Kell later.** Terrain and water within a session
-  or two. The risk is the usual one: a stub that works is rarely revisited, and every downstream
-  number inherits an arbitrary constant.
-- C) **Stub it behind the real interface.** Define the star's public surface now, implement it as a
-  constant, and swap in the derivation later without touching callers. Mitigates B's risk if — and
-  only if — the stub raises loudly rather than returning a plausible default.
+**Notes:** One consequence makes this less academic than it looks: because there is **no atmospheric
+escape at all** in 2D, composition is strictly cumulative — a 2D planet keeps every gas it ever
+acquires, forever. An atmosphere that only ever accumulates may need more compositional structure
+than a single bulk species can carry, or it may not; that is the question. Cheap to defer, and it
+should be deferred until the atmosphere layer actually needs it.
 
-**Notes:** The user's stated preference is to build slowly, which favours A. Recommend A if the
-appetite is there, C if you want to see terrain this week. If C, the stub value must be tagged as an
-axiom in `docs/AXIOMS.md` so it cannot quietly become a derived-looking number.
+---
+
+### DECISION-014 — Grey or spectral radiative transfer?
+
+**Status:** open
+**Raised:** 2026-09-03 — Session 3 (as DECISION-009c). Split out 2026-09-05 — Session 5.
+**Resolved by:** human
+**Blocks:** The climate layer. Not the star stub, which sits above this.
+
+**Question:** Is radiative transfer grey (frequency-independent) or spectral?
+
+**Notes:** Recommend grey until DECISION-013 says composition matters. Spectral transfer layered on
+top of an abstracted electromagnetism (T1.2) and an abstracted chemistry (T1.3) would be false
+precision — detailed frequency structure resting on posited opacities is not more truthful than a
+single band, only more expensive.
 
 ---
 
@@ -135,6 +132,71 @@ embedding or a fallback that holds up) and world-file size limits if generated d
 ---
 
 ## RESOLVED
+
+### DECISION-009 — How are a world's dimensionless ratios chosen?
+
+**Status:** resolved
+**Raised:** 2026-09-03 — Session 3. Reframed Session 4.
+**Resolved:** 2026-09-05 — Session 5
+
+**Question:** Natural units removed the question of what `G₂` and `σ₂` are worth — both are 1 by
+construction. What remained is the only physical content: the dimensionless ratios characterising a
+particular Vellum, and how they get chosen. Fixed by fiat, tuned until a habitable world exists, or
+scanned?
+
+**Outcome:** **Scanned.** The ratios are swept over a grid; habitability is an *output* of the sweep,
+not an assumption built into it. A world is then chosen from inside the habitable region, and the
+reason for the choice is recorded.
+
+**Rationale:** It is the only option that makes habitability falsifiable rather than assumed. Fixing
+by fiat risks producing no world at all; tuning guarantees a world but forfeits the claim that it was
+found rather than built — and that claim is the entire point of deriving the physics instead of
+importing it. Scanning costs the most work and yields a map of which two-dimensional worlds can
+support a lit, stable surface, which is itself among the more interesting results the project could
+produce.
+
+**Consequences for the architecture** — these are load-bearing and are recorded in MEMORY.md:
+- The simulation must run in **two fidelities**: a cheap screening model evaluated over the whole
+  grid, and the full layer stack for a chosen point. A design that only supports the full stack
+  cannot scan.
+- Determinism becomes a stronger requirement, not a nicety: every grid point is a parameter tuple
+  plus a seed and must be exactly reproducible for its result to mean anything.
+- Scan results are a **data product** — they persist, they are versioned against the code that
+  produced them, and a scan run against changed physics is a different scan.
+
+**Copied to MEMORY.md:** yes
+
+---
+
+### DECISION-010 — Derive Kell, or stub its luminosity?
+
+**Status:** resolved
+**Raised:** 2026-09-03 — Session 3
+**Resolved:** 2026-09-05 — Session 5
+
+**Question:** Is the star derived from 2D stellar structure, or treated as a boundary condition so
+the planet can be built sooner?
+
+**Outcome:** **Stubbed, behind the real interface** (option C). The star's public surface is defined
+now and implemented as an input; the structure solve arrives later without callers changing.
+
+**Rationale:** It reaches terrain in a session or two rather than a week, and — the part that makes
+it more than a shortcut — it composes cleanly with DECISION-009. Under a scan, a stubbed luminosity
+is simply **another axis of the parameter sweep** rather than a placeholder to be embarrassed about.
+Deriving Kell later does not invalidate the scan; it *collapses a dimension of it*, by predicting
+luminosity from stellar mass instead of sweeping it independently. That is a strictly better position
+to derive the star from, because by then there will be a map showing which luminosities matter.
+
+**Binding conditions on the stub** — without these it is the bad kind of shortcut:
+- The luminosity is tagged as an **abstraction in `docs/AXIOMS.md` §4**, never as a derived quantity.
+- The stub **raises** when asked for anything it cannot honestly supply — spectrum, radius, lifetime,
+  evolution. It never returns a plausible default. A stub that answers everything is never revisited.
+- Any result depending on it is reported as a consequence of a chosen parameter, not a finding about
+  two-dimensional physics.
+
+**Copied to MEMORY.md:** yes
+
+---
 
 ### DECISION-011 — Is electromagnetism modelled or abstracted?
 

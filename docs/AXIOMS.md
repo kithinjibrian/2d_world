@@ -10,8 +10,10 @@ of three things:
 
 A number fitting none of the three is a bug.
 
-**Status.** The tier structure and §2–§5 are settled. What remains open is which dimensionless
-ratios characterise a world and how they are chosen — DECISION-009.
+**Status.** The tier structure and §2–§5 are settled. The dimensionless ratios that characterise a
+world are **scanned** rather than chosen (DECISION-009): habitability is an output of a parameter
+sweep, not an assumption built into it. What remains open is the predicate deciding which grid points
+count as habitable — DECISION-012.
 
 ---
 
@@ -110,7 +112,13 @@ goes as `k^(d−1)` and the energy density therefore as `T^(d+1)`. The photon's 
 state changes the constant `σ₂`, not the exponent. Wien's displacement law survives in form
 (`λ_peak · T = const`) with a different constant.
 *Parameters:* `σ₂` (set to 1 by units, see §2); opacity. Whether transfer is grey or spectral is
-DECISION-009c.
+DECISION-014.
+
+**Kell's output is an input, not a result** (DECISION-010). The star is stubbed behind its real
+interface: luminosity is supplied as a swept parameter rather than solved from stellar structure.
+Under a scan this is not a placeholder but an extra axis — and deriving the star later *collapses*
+that axis by predicting luminosity from stellar mass, rather than invalidating anything. The stub
+raises rather than answering for spectrum, radius, lifetime or evolution.
 
 **T2.3 — Fluids obey the Navier–Stokes equations in two dimensions.**
 Nothing about turbulence is imposed. The inverse cascade — energy to large scales, enstrophy to
@@ -144,8 +152,8 @@ ratios.** In our own universe the questions that matter are the fine-structure c
 proton–electron mass ratio, not the numeric value of `G`. The same holds here: a world is
 characterised by ratios such as Kell's mass to Vellum's, orbital radius to planetary radius,
 atmospheric scale height to radius, thermal to gravitational binding energy, and the Reynolds number
-of the atmosphere. **Those are the free parameters of a world, and those are what DECISION-009 is
-about.**
+of the atmosphere. **Those are the free parameters of a world, and they are swept, not chosen** —
+see DECISION-009. Habitability is read off the sweep, never assumed into it.
 
 ### Dimensions in two dimensions
 
@@ -246,6 +254,7 @@ it is asked for something it cannot honestly supply, rather than returning a pla
 | Chemistry | Follows from T1.3 | Composition is a small set of bulk species with assumed properties | DECISION-009b |
 | Constitutive relations (T2.1, T2.3, T2.4) | Effective theories require them by construction | Viscosity, specific heats, stiffness are chosen | Only if a value turns out to matter qualitatively |
 | Non-relativistic regime (T0.3) | Assumed, not checked | Invalid if any derived speed approaches a signal speed | Once orbital speeds are known |
+| Kell's luminosity (T2.2) | DECISION-010 — stubbed to reach the surface layers sooner | Stellar output is a swept parameter, so no climate result is a finding about stellar physics | Once the scan shows which luminosities matter — the map makes the derivation better targeted |
 
 ---
 

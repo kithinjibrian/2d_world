@@ -371,6 +371,14 @@ computation is array math on periodic domains; a framework would add indirection
 7. **Derived layers depend downward only.** Star → orbit → planet → surface → water → air → life.
    A lower layer never reads from a higher one. If it needs to, the layering is wrong — stop and
    open a decision.
+8. **Every layer runs at two fidelities.** A world is chosen by scanning a grid of dimensionless
+   ratios (DECISION-009), so each layer needs a cheap screening path evaluated over the whole grid
+   as well as the full solve for a chosen point. A layer supporting only the full solve cannot be
+   scanned, and retrofitting a screening path means rewriting it. Design both at once, and state in
+   the PRP what the screening model neglects and why that is safe for pruning.
+9. **Scan results are a versioned data product.** A scan is stamped with the code version and the
+   parameter grid that produced it. A scan run against changed physics is a different scan, not an
+   update of the old one — never merge them, and never compare across versions without saying so.
 
 ---
 
@@ -388,16 +396,20 @@ computation is array math on periodic domains; a framework would add indirection
    about two-dimensional physics.
 4. **Never introduce an unseeded random source.** It silently destroys reproducibility, and you will
    not notice until you try to regenerate a world you cared about.
-5. **Never hand-place an emergent phenomenon.** Storms, basins, and species distributions are
+5. **Never let a stub answer a question it cannot honestly answer.** A stub returning a plausible
+   default is never revisited — it silently becomes the model. Kell is stubbed (DECISION-010) and
+   raises for spectrum, radius, lifetime and evolution rather than guessing. The same holds for
+   every future stand-in.
+6. **Never hand-place an emergent phenomenon.** Storms, basins, and species distributions are
    results. Placing them by hand and reporting them as findings is the deepest way to waste this
    project's time.
-6. **Never let a non-finite value propagate.** Check and raise at the kernel boundary.
-7. **Never add a framework, engine, or dependency to solve a structural problem.** The structure is
+7. **Never let a non-finite value propagate.** Check and raise at the kernel boundary.
+8. **Never add a framework, engine, or dependency to solve a structural problem.** The structure is
    arrays on periodic domains. If that feels insufficient, the design is wrong, not the tooling.
-8. **Never let a fact live only in the conversation.** A derivation you worked out and did not write
+9. **Never let a fact live only in the conversation.** A derivation you worked out and did not write
    down evaporates at the end of the session. It goes in `docs/AXIOMS.md`, a docstring, or a
    DECISIONS.md entry before the session closes.
-9. **Never edit `setup.md`.** External reference material.
+10. **Never edit `setup.md`.** External reference material.
 
 ---
 

@@ -348,9 +348,92 @@ define a world and whether they are fixed, tuned or scanned.
 
 ---
 
-## SESSION 5 — 2026-09-05 — Scan and stub resolved — open
+## SESSION 5 — 2026-09-05 — Scan and stub resolved — closed
 
 Branch: setup/context-system
+
+### WHAT WAS DONE
+
+Resolved the two decisions that were gating the layer order. User direction: *"scanned. and stub
+kell for now."*
+
+**DECISION-009 — scanned.** The dimensionless ratios defining a world are swept over a grid, and
+habitability is an output of the sweep rather than an assumption built into it. This is the choice
+that makes habitability falsifiable: fixing the ratios risks producing no world at all, tuning them
+guarantees one but forfeits the claim that Vellum was found rather than built.
+
+The consequences are architectural and load-bearing, so they were written into CLAUDE.md as rules
+rather than left as intent. **Every layer now needs two fidelities** — a cheap screening path
+evaluated over the whole grid, and the full solve for a chosen point. A layer that supports only the
+full solve cannot be scanned, and retrofitting a screening path afterwards means rewriting it, so
+both get designed at once and the PRP must state what the screening model neglects and why that is
+safe for pruning. **Determinism stops being a nicety** and becomes load-bearing, since each grid
+point is a parameter tuple plus a seed and an irreproducible point is a meaningless one. **Scans
+become versioned data products**, stamped with the code version and grid that produced them — a scan
+run against changed physics is a different scan, never an update.
+
+**DECISION-010 — stubbed, behind the real interface.** The observation that makes this more than a
+shortcut: under a scan, a stubbed luminosity is not a placeholder but simply **another axis of the
+sweep**. Deriving Kell later does not invalidate the scan, it *collapses a dimension of it* by
+predicting luminosity from stellar mass instead of sweeping it independently — and it is a better
+place to derive a star from than the beginning, because by then there will be a map showing which
+luminosities matter.
+
+Three conditions bind the stub, without which it is the bad kind of shortcut: the luminosity is
+tagged in the abstraction ledger and never as derived; the stub **raises** for spectrum, radius,
+lifetime and evolution rather than returning a plausible default; and any result depending on it is
+reported as a consequence of a chosen parameter. A new anti-pattern covers the general case — a stub
+that answers everything is never revisited and silently becomes the model.
+
+Split the two leftover sub-questions of the old DECISION-009 into their own entries, and opened the
+question the scan immediately implies.
+
+### FILES CREATED OR MODIFIED
+
+    DECISIONS.md          — 009 and 010 resolved; 012 opened (habitability predicate); 013 and 014
+                            split out from the old 009b and 009c
+    MEMORY.md             — decisions 12 (scanned) and 13 (Kell stubbed) added; state and next-session
+                            block rewritten
+    CLAUDE.md             — architecture rules 8 and 9 (two fidelities; scans as versioned data
+                            products); new anti-pattern 5 on stubs that answer too much
+    docs/AXIOMS.md        — status updated; Kell's output declared an input under T2.2; ledger entry
+                            for the stubbed luminosity; §2 records that ratios are swept
+    CHANGELOG.md          — Unreleased updated
+    CONTEXT.md            — this entry
+    reports/2026-09-05.md — EOD report
+
+No simulation code. `sim/` still does not exist.
+
+### TESTS WRITTEN
+
+None. Nothing executable exists yet.
+
+### DECISIONS MADE
+
+- DECISION-009 resolved: ratios are scanned; habitability is an output.
+- DECISION-010 resolved: Kell stubbed behind its real interface, with binding conditions.
+
+### PENDING DECISIONS OPENED
+
+- **DECISION-012 — what counts as habitable?** Opened because "scanned" is meaningless without a
+  predicate deciding which grid points count. Recommendation: liquid water as a cheap coarse screen,
+  climate stability layered onto the survivors — the second being the more interesting criterion
+  precisely because `T³` emission is a weaker stabilising feedback than the 3D quartic, so a 2D
+  climate should be more prone to runaway. Recorded as a **world-selection predicate, not an
+  axiom**: it says which worlds interest us, not which worlds exist.
+- DECISION-013 — does chemistry get any representation? (was 009b). Sharpened by a consequence
+  already in the axioms: with no atmospheric escape at all, composition is strictly cumulative, so
+  an atmosphere that only ever accumulates may need more structure than one bulk species can carry.
+- DECISION-014 — grey or spectral radiative transfer? (was 009c). Recommendation: grey, since
+  spectral detail resting on an abstracted electromagnetism and an abstracted chemistry would be
+  false precision rather than more truth.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** Branch `setup/context-system` is local, ten commits.
+- DECISION-012 blocks the scan, though not the units layer.
+- The apsidal precession result and the 2+1D graviton count remain hand derivations awaiting
+  numerical confirmation.
 
 ---
 
@@ -358,23 +441,25 @@ Branch: setup/context-system
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order. Then read
-`docs/AXIOMS.md` in full; it was restructured in Session 4 and is the anchor for everything.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order, then `docs/AXIOMS.md`
+in full.
 
-**Write the PRP for the units layer.** Session 4 made it much smaller than it first looked: natural
-units remove the need to invent any magnitude, so the module is mechanical — fix the base dimensions
-(mass, length, time, temperature), express everything else as a product of powers, check it
-automatically. Its tests are dimensional assertions written before any physics, and they must include
-that dimensionless results really are dimensionless, since in natural units a slip hides behind a
-constant equal to 1. It is unblocked by both open decisions.
+**Write the PRP for the units layer.** Still the first module, still unblocked by every open
+decision. Natural units remove the need to invent any magnitude, so the work is mechanical: fix the
+base dimensions (mass, length, time, temperature), express everything else as a product of powers,
+check it automatically. Tests are dimensional assertions written before any physics, and they must
+assert that dimensionless results really are dimensionless — in natural units a slip hides behind a
+constant equal to 1.
 
-Two questions for the user when convenient, neither blocking that PRP:
-- **DECISION-009a** — are the dimensionless ratios defining a world fixed, tuned, or scanned?
-  Recommendation: scanned.
-- **DECISION-010** — derive Kell from 2D stellar structure, or stub its luminosity behind a real
-  interface and reach terrain sooner?
+Two things settled in Session 5 shape every layer after it and belong in that PRP's thinking, even
+though neither changes the units layer itself: **every layer needs a screening path as well as a
+full solve**, and **Kell is stubbed and must raise** rather than default.
 
-Layer order after the units layer: star → orbit → planet → surface → water → air → life. Do not
-start a layer before the one below it passes its invariant tests.
+Layer order: units → orbit → planet → surface → water → air → life, with the star supplied rather
+than solved.
+
+Worth putting to the user when convenient: **DECISION-012**, what counts as habitable. It does not
+block the units layer, but it blocks the scan, and the scan is what the architecture is now shaped
+around.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.
