@@ -333,9 +333,42 @@ one.
 
 ---
 
+### 18. What actually breaks across eleven orders of magnitude
+
+**Decision:** The viewer composes positions hierarchically — `anchor + offset`, never summed
+absolutely — and surface bodies are held as (surface coordinate, height) rather than as world
+positions. Scale bands are **dimensionless ratios** of viewport span to planet circumference.
+
+**Why:** Three claims were tested in Session 11 and two were wrong.
+
+*Camera-relative transforms do not buy float64 precision here.* With a focus 1e11 away and two
+points a metre apart, the relative and absolute forms both give exactly 100 px. Eleven orders of
+magnitude sit comfortably inside float64's sixteen digits. What the absolute form breaks is **pixel
+coordinate magnitude**: 1e11 at 100 px/unit is 1e13 pixels and SDL takes C ints that stop at 2.1e9.
+The renderer overflows long before the float does.
+
+*The real precision floor is in storing an absolute coordinate at all.* One ulp at 1e11 is about 15
+microns, so ground detail finer than that cannot be represented as an absolute position however it
+is transformed. Composing from the planet centre instead keeps the arithmetic near the planet's
+radius, where an ulp is nanometres. This is why surface positions live in surface coordinates — the
+same 1D periodic array the simulation already wanted.
+
+*Scale bands in absolute units were simply wrong.* The simulation works in natural units where the
+orbital radius is about 1, so metre-based thresholds put every zoom level in one band. A band means
+"how much of the world can I see", which is a ratio — consistent with the project's position that
+only dimensionless ratios are physically meaningful.
+
+**Rules out:** Any GPU path (float32 cannot even represent 1e11+1 distinctly). Absolute world
+positions for anything on the ground. Thresholds in absolute units anywhere in the viewer.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
+- **`sim/view/`** — a window that zooms from the whole system to a sliver of surface. Camera,
+  bands, geometry and scene are pure and tested headless; only `render.py` and `app.py` touch a
+  display. Run with `python -m sim.view.app`.
 - **`sim/orbit/`** — two-body integration under `F ∝ 1/r`, the analytic screening path, apsidal
   measurement, and insolation. **`sim/star/`** — Kell, stubbed and raising for anything beyond mass
   and luminosity.
@@ -353,7 +386,6 @@ one.
 - Nothing. The orbit layer is complete; the next layer has no PRP yet.
 
 ### Not Started
-- The viewer. `PRPs/viewer-layer.md` is written and awaits approval.
 - planet, surface, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
   deferred out of the orbit layer and need one.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate
@@ -365,24 +397,21 @@ one.
 
 Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md, then `docs/AXIOMS.md`.
 
-The orbit layer is done and green: 174 tests, `mypy --strict` and `ruff` clean. `docs/AXIOMS.md` §3
-now records six established consequences of `F ∝ 1/r`, all confirmed in code rather than on paper.
+The viewer is complete and green: 228 tests, headless, `mypy --strict` and `ruff` clean. Run it with
+`.venv/bin/python -m sim.view.app` — scroll to zoom, arrows to pan, `f` to stop following Vellum,
+`home` to reframe.
 
-Two candidates for the next PRP, and they are different in kind:
+**The next PRP is the surface layer**, and it is now the one that unlocks everything: it is what the
+viewer was built to show, and DECISION-017 must be answered first — is terrain a sampled raster or a
+field evaluable at any resolution? The recommendation is a spectral base field, because the viewer
+will ask for `h(x)` at eleven different scales and a raster fixes a resolution forever.
 
-- **The debris population and the impact cycle.** Deferred out of the orbit layer to keep its scope
-  honest. It is the natural continuation of the sky, and it is what the monograph calls the
-  metronome of Vellum's biology. Needs N-body or a statistical treatment — that choice is itself
-  worth a decision entry.
-- **The planet layer** — Vellum as a body: surface gravity, atmospheric column, thermal equilibrium
-  under `T³` emission and `1/r` insolation. This is the first layer where DECISION-012 starts to
-  bite, since equilibrium temperature is what a habitability predicate would test.
+Adding a layer to the view is deliberately small: give it a `bands` attribute and a
+`draw(camera, target)`, use `camera.surface_to_screen` for anything on the ground rather than an
+absolute world position, and `visible_surface_indices` to cull. That is the whole contract.
 
-Recommend the planet layer, because it moves toward the scan and toward the surface, and because
-DECISION-012 needs a concrete definition before the sweep can mean anything.
-
-Still open: **DECISION-012** (what counts as habitable), **DECISION-013** (chemistry), **DECISION-014**
-(grey vs spectral transfer). All three converge on the climate layers.
+Also still open: DECISION-012 (habitability predicate, blocks the scan), -013 (chemistry), -014
+(grey vs spectral transfer).
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

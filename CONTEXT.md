@@ -896,9 +896,106 @@ hard to test; here it need not be, because almost all the difficulty is in pure 
 
 ---
 
-## SESSION 11 — 2026-09-05 — Viewer implementation — open
+## SESSION 11 — 2026-09-05 — Viewer implementation — closed
 
 Branch: sim/viewer
+
+### WHAT WAS DONE
+
+Implemented the viewer test-first. **228 tests**, all passing headless, `mypy --strict` and `ruff`
+clean. `python -m sim.view.app` opens a window that zooms from the whole system to a sliver of
+Vellum's surface.
+
+Structure follows the PRP: `bands.py`, `geometry.py`, `camera.py` and `scene.py` are pure and import
+no pygame — a parametrised test enforces that — while `render.py` and `app.py` are thin enough to be
+checked by reading. A viewer is normally hard to test; here almost all of it is coordinate
+arithmetic, so almost all of it is testable with no display.
+
+**Three claims were measured, and two of mine were wrong.**
+
+*The PRP's precision justification was wrong.* Camera-relative transforms do **not** buy float64
+precision at this range: focus 1e11 away, two points a metre apart, relative and absolute both give
+exactly 100 px. Eleven orders of magnitude sit comfortably inside float64's sixteen digits. What the
+absolute form actually breaks is **pixel coordinate magnitude** — 1e11 at 100 px/unit is 1e13 pixels
+and SDL takes C ints that stop at 2.1e9. The renderer overflows long before the float does. (float32
+*would* lose it — 1e11+1 is not even representable — which does vindicate choosing SDL2 over
+OpenGL.)
+
+*The real precision floor is storing an absolute coordinate at all.* One ulp at 1e11 is ~15 microns,
+so ground detail finer than that cannot be an absolute position however it is transformed. Composing
+from the planet centre keeps arithmetic near the planet radius where an ulp is nanometres. This is
+why surface positions are held as (surface coordinate, height) — the same 1D periodic array the
+simulation already wanted, now load-bearing for a second reason.
+
+*Scale bands in absolute units were simply wrong.* They were thresholds in metres, but the
+simulation works in natural units where the orbital radius is about 1, so **every** zoom level
+reported "ground". A smoke render across twelve decades surfaced it. Bands are now dimensionless
+ratios of viewport span to planet circumference, which is both correct and consistent with the
+project's position that only ratios are physically meaningful.
+
+**Three bugs found in my own code, two of them by tests that were themselves wrong first.**
+
+- `mod()` wrapped with `fmod(fmod(a,b)+b, b)`, the usual trick for making negatives positive. Adding
+  the circumference quantises at *its* ulp — 7.45 nm for a 3.84e7 surface — so a micron of surface
+  position lost 0.16% of itself. Invisible in a unit test of `mod`, plainly visible as a wrong pixel
+  offset at ground zoom.
+- Python's `%` fixes that but has its own edge: `-1e-9 % 3.84e7` returns exactly `3.84e7`, because
+  1e-9 is under half an ulp there. That puts a surface position out of `[0, C)` and would break
+  index arithmetic downstream. The wrap point now folds to zero.
+- `Disc` stored both radius and circumference. They are not independent for a circle, and the two I
+  supplied disagreed by 2%, so surface coordinates mapped to arcs 2% short. The class now stores the
+  circumference and derives the radius, which makes the inconsistency unrepresentable.
+
+**And the mutation run caught a test that was not testing what it claimed.** Reverting the anchored
+transform to an absolute one left the whole suite green. The micron test displaced along *y*, where
+the anchor is zero, so the large coordinate was never touched. Rewritten to view the top of the disc
+— where the displacement lies along x, the axis carrying the 1e11 offset — it now fails under that
+mutation as intended.
+
+### MUTATION RESULTS
+
+    anchored transform -> absolute     1 failed   caught (only after fixing the test)
+    mod() -> fmod(fmod+b, b)           2 failed   caught
+    seam-aware culling -> single run   1 failed   caught
+
+### FILES CREATED OR MODIFIED
+
+    sim/view/bands.py        — NEW. Dimensionless scale bands
+    sim/view/geometry.py     — NEW. Disc, seam-aware culling, coordinate helpers
+    sim/view/camera.py       — NEW. Transforms, zoom, hierarchical composition
+    sim/view/scene.py        — NEW. Drawable protocol, band dispatch
+    sim/view/render.py       — NEW. Star, orbit trace, planet disc, scale bar
+    sim/view/app.py          — NEW. Window and event loop
+    sim/view/__init__.py     — NEW. Public surface, and how a layer joins the view
+    sim/tests/view/*.py      — NEW, four files
+    pyproject.toml           — pygame-ce
+    CHANGELOG.md, MEMORY.md (decision 18), CONTEXT.md
+
+### TESTS WRITTEN
+
+228 total, 63 new. Purity (four modules import no pygame), transforms and round trips at every
+band, hierarchical precision, zoom about a cursor holding its world point fixed at every scale,
+clamping that reports itself, band partitioning with no gap or overlap, seam-aware culling checked
+against brute force over 60 random arcs, scene dispatch and its two error paths, and headless smoke
+renders asserting pixels actually change.
+
+### DECISIONS MADE
+
+- `Disc` derives its radius rather than storing it.
+- Scale bands are dimensionless ratios, not absolute lengths.
+- Radial-infall-style edge cases in `mod` fold to zero rather than raising: a position half an ulp
+  below the wrap point *is* the wrap point.
+
+### PENDING DECISIONS OPENED
+
+None. DECISION-017 was already open and is now the gate on the surface layer.
+
+### STILL OPEN AT CLOSE
+
+- Branch `sim/viewer` is unmerged and unpushed.
+- The viewer shows a bare disc: there is no terrain, water or life yet. That was the deal in
+  DECISION-016.
+- DECISION-012, -013, -014, -017 all open.
 
 ---
 
@@ -906,17 +1003,23 @@ Branch: sim/viewer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
-`PRPs/viewer-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-**If the viewer PRP is approved, implement it test-first** on branch `sim/viewer`. Keep the split
-strict: `camera.py` is pure and holds nearly all the logic, `render.py` and `app.py` stay thin
-enough to be obviously correct. The acceptance criterion most easily skipped is the one that matters
-— make the transform absolute instead of camera-relative and confirm the precision test goes red.
+The viewer is complete and green on branch `sim/viewer`, unmerged. Merge it to `main` first.
 
-After that, the planet layer is the natural next physics, and DECISION-012 needs answering before
-any scan can mean anything.
+**The next PRP is the surface layer.** It is what the viewer was built to show, and
+**DECISION-017 must be answered before it is written** — a sampled raster fixes a resolution
+forever, while a spectral field lets the viewer regenerate `h(x)` at any of the eleven scales it
+spans. Recommendation: a spectral base field, plus a sampled residual only if the ground is ever
+eroded or cratered.
 
-Environment: `.venv/`. `pygame-ce` is not yet installed; the viewer PRP adds it.
+Adding a layer to the view is one class: a `bands` attribute and a `draw(camera, target)`, using
+`camera.surface_to_screen` for anything on the ground and `visible_surface_indices` to cull.
+
+Carry the Session 11 lesson forward: **mutate and re-run before believing a justification, and
+check that the test fails for the reason you think.** The anchored-transform test passed under its
+own mutation because it was displacing along an axis where the anchor was zero.
+
+Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

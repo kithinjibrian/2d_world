@@ -9,6 +9,9 @@ Never deleted. Older entries are never modified.
 ## [Unreleased]
 
 ### Added
+- A viewer. A window that zooms continuously from the whole Kell system down to a sliver of
+  Vellum's surface, with panning that wraps because the surface has no edge. Today it draws the
+  star, the orbit and a bare disc; each future layer becomes visible the moment it lands.
 - The orbit layer — Vellum's motion around Kell under two-dimensional gravity, with the insolation
   it produces. Establishes in code what had only been derived on paper: circular orbital speed is
   the same at every distance, orbital period is linear in radius rather than Kepler's three-halves
