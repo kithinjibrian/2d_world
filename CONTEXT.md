@@ -1580,6 +1580,12 @@ None.
 
 ---
 
+## SESSION 19 — 2026-09-06 — System view regressions — open
+
+Branch: fix/viewer-system-view
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
