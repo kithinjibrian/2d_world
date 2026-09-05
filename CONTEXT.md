@@ -1872,6 +1872,12 @@ None. DECISION-013 would matter for ice and salinity; neither is in scope.
 
 ---
 
+## SESSION 23 — 2026-09-06 — Water layer implementation — open
+
+Branch: sim/water-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
