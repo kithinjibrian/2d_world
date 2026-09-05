@@ -437,9 +437,80 @@ None. Nothing executable exists yet.
 
 ---
 
-## SESSION 6 — 2026-09-05 — Units layer PRP — open
+## SESSION 6 — 2026-09-05 — Units layer PRP — closed
 
 Branch: setup/context-system
+
+### WHAT WAS DONE
+
+Wrote `PRPs/units-layer.md`, the first PRP in the project. No code — the PRP rule requires approval
+before any is written, and one open decision blocks approval.
+
+The dimensional algebra in the PRP was **derived and checked in a scratch script**, not recalled.
+That produced three discriminating tests, each a formula a 3D-trained reflex writes wrongly and
+dimensional analysis catches:
+
+- `g = G₂M/r` is an acceleration (`M⁻¹L²T⁻² · M / L = LT⁻²`); the inverse-square form `G₂M/r²` gives
+  `T⁻²` and is not.
+- `L = 2πR σ₂ T³` is a power (`L · MLT⁻³Θ⁻³ · Θ³ = ML²T⁻³`); the 3D form `4πR²σ₂T⁴` gives `ML³T⁻³Θ`
+  and is not.
+- `P = ρgh` gives 2D pressure `MT⁻²` with `ρ = ML⁻²`, and 3D pressure `ML⁻¹T⁻²` with `ML⁻³`.
+
+Two findings from the same check, both recorded in the PRP:
+
+- **Reynolds number does not discriminate.** `ρvL/μ` is dimensionless under both the 2D and the 3D
+  forms, so it is worthless as a check. It was the obvious candidate for a marquee test and it was
+  nearly used as one. The PRP now says explicitly not to add it, and why, so a later session does not
+  add it believing it proves something.
+- **2D dynamic viscosity is `M T⁻¹`**, not the 3D `M L⁻¹ T⁻¹` — while *kinematic* viscosity is
+  `L² T⁻¹` in both. Worth a test precisely because it is the case that does not change: the module
+  should not leave a reader believing everything differs in 2D.
+
+The natural-unit closure was confirmed to actually close: `G₂ = 1` forces `T = L/√M`, and `σ₂ = 1`
+then forces `Θ = (M L T⁻³)^⅓`, so two display anchors fix all four base units. That becomes an
+invariant test.
+
+The PRP's most consequential instruction is a negative one: **define no 3D dimension at all.** Not
+`DENSITY_3D`, not an inverse-square helper. A name that exists can be selected by accident; a name
+that does not exist cannot. It is the cheapest available enforcement of the anti-pattern the whole
+module exists to serve.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/units-layer.md   — NEW. The first PRP. Blocked on DECISION-015
+    DECISIONS.md          — DECISION-015 opened
+    CONTEXT.md            — this entry
+
+No code. `sim/` still does not exist.
+
+### TESTS WRITTEN
+
+None — the PRP is not approved, so no implementation exists to test. The test list is written and is
+the substance of the PRP.
+
+The dimensional algebra itself was verified in a throwaway script during drafting. That script was
+not kept; its results are recorded above and in the PRP, and the real tests will re-derive them.
+
+### DECISIONS MADE
+
+None. One was opened rather than assumed.
+
+### PENDING DECISIONS OPENED
+
+- **DECISION-015 — where does dimension checking happen?** Runtime on every quantity, test-time only,
+  or at module boundaries with raw arrays inside kernels. Recommendation: boundaries, because the
+  error this module exists to catch happens at definition and composition rather than inside a loop
+  already holding correct arrays — and because DECISION-009 multiplies any inner-loop cost by the
+  size of the scan. It changes the public API, so it must be answered before approval rather than
+  during implementation.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** Branch `setup/context-system` is local, twelve commits.
+- The units PRP awaits DECISION-015 and then explicit approval.
+- DECISION-012 still blocks the scan.
+- The apsidal precession result and the 2+1D graviton count remain hand derivations awaiting
+  numerical confirmation.
 
 ---
 
@@ -448,24 +519,22 @@ Branch: setup/context-system
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order, then `docs/AXIOMS.md`
-in full.
+and `PRPs/units-layer.md`.
 
-**Write the PRP for the units layer.** Still the first module, still unblocked by every open
-decision. Natural units remove the need to invent any magnitude, so the work is mechanical: fix the
-base dimensions (mass, length, time, temperature), express everything else as a product of powers,
-check it automatically. Tests are dimensional assertions written before any physics, and they must
-assert that dimensionless results really are dimensionless — in natural units a slip hides behind a
-constant equal to 1.
+**Do not write code yet.** `PRPs/units-layer.md` is written but not approved, and it is blocked on
+**DECISION-015** — whether dimensions are carried at runtime, checked only in tests, or validated at
+module boundaries with raw arrays inside kernels. The recommendation is boundaries. That answer
+changes the module's public API, so it cannot be deferred into implementation.
 
-Two things settled in Session 5 shape every layer after it and belong in that PRP's thinking, even
-though neither changes the units layer itself: **every layer needs a screening path as well as a
-full solve**, and **Kell is stubbed and must raise** rather than default.
+Once DECISION-015 is answered and the PRP is approved, implement it test-first. The acceptance
+criteria include one step that is easy to skip and is the whole point: **break a formula to its
+inverse-square form and confirm the suite goes red.** A test that cannot fail proves nothing, and
+this module's entire value is in what it refuses to accept.
 
-Layer order: units → orbit → planet → surface → water → air → life, with the star supplied rather
-than solved.
+After the units layer, the order is: orbit → planet → surface → water → air → life, with Kell
+supplied rather than solved. Every layer after this one needs a screening path as well as a full
+solve.
 
-Worth putting to the user when convenient: **DECISION-012**, what counts as habitable. It does not
-block the units layer, but it blocks the scan, and the scan is what the architecture is now shaped
-around.
+Also worth putting to the user: **DECISION-012**, what counts as habitable. It blocks the scan.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

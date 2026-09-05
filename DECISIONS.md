@@ -12,6 +12,45 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
+### DECISION-015 — Where does dimension checking happen?
+
+**Status:** open
+**Raised:** 2026-09-05 — Session 6
+**Resolved by:** human
+**Blocks:** `PRPs/units-layer.md`. It changes the module's public API, so it cannot be deferred past
+approval.
+
+**Question:** Are dimensions carried at runtime by every quantity, or checked only at boundaries and
+in tests?
+
+**Options:**
+- A) **Runtime `Quantity` everywhere.** Every value carries its dimension; every operation checks.
+  Catches everything, including mistakes inside kernels. Costs a wrapper object or a dtype on every
+  array operation — real overhead in an inner loop, and DECISION-009 means sweeping a grid of worlds,
+  so inner-loop cost is multiplied by the size of the scan.
+- B) **Test-time only.** Plain numpy floats everywhere. Dimensions are declared symbolically and
+  asserted against formulas in tests, never carried by values. Zero runtime cost. Misses any error
+  in a code path no test exercises.
+- C) **Boundaries and tests — `Quantity` at module edges, raw arrays inside kernels.** Public
+  functions accept and return dimensioned quantities and validate on the way in; internal numerics
+  operate on unwrapped arrays. Costs one check per call rather than per element.
+
+**Notes:** Recommend **C**. The failure this module exists to prevent is a constant or a formula
+entering with the wrong dimensions — that happens at definition and at composition, which are
+exactly the boundaries, not inside a loop that has already been handed correct arrays. C catches
+essentially the whole risk class at a cost that does not scale with the grid, and it keeps kernels
+as plain numpy, which is also what keeps them readable and fast.
+
+A is the safest and the one to choose if the scan turns out to be cheaper than expected or if
+correctness worries outweigh throughput. B is the cheapest and is defensible only because the
+discriminating tests in the units PRP catch the realistic mistakes — but it leaves no guard on code
+written later by a session that forgets to write the test.
+
+Whichever is chosen, the named-dimension table stays and the three discriminating tests stay; this
+decision only governs whether dimensions ride along with values at runtime.
+
+---
+
 ### DECISION-012 — What counts as habitable?
 
 **Status:** open
