@@ -613,9 +613,92 @@ None.
 
 ---
 
-## SESSION 8 — 2026-09-05 — Orbit layer PRP — open
+## SESSION 8 — 2026-09-05 — Orbit layer PRP — closed
 
 Branch: sim/orbit-layer
+
+### WHAT WAS DONE
+
+Wrote `PRPs/orbit-layer.md`. No code — it awaits approval.
+
+Before writing it, ran a throwaway integration in the scratchpad to check the predictions the PRP
+would be built around, rather than writing a PRP resting on paper derivations. **All five hold**,
+and three of them were not previously recorded anywhere:
+
+1. **Circular orbital speed is independent of radius.** `v_c = √(G₂M)`, identical at every distance,
+   because a logarithmic potential gives `r·dΦ/dr = G₂M` with no `r` left in it. Verified from
+   `r = 0.5` to `r = 50` with a relative radius spread of ~2.5e-9. This is the 2D analogue of a flat
+   galactic rotation curve, and it is a striking fact about the world: every circular orbit, however
+   far out, moves at the same speed.
+2. **Kepler's third law is replaced by `T ∝ r`.** Period is linear in radius, not `r^(3/2)`.
+   Fitted exponent 1.0000000000000004.
+3. **The apsidal angle is `π/√2 ≈ 127.2792°`**, so pericentre-to-pericentre is `254.5584°` and the
+   apsis regresses ≈105.4416° per orbit. Measured `254.5500°` at `v/v_c = 1.02`. The Session 3 hand
+   derivation is confirmed.
+4. **A season cycles in exactly `2 + √2 ≈ 3.414214` orbits** — a closed form, since
+   `360/(360 − 180√2) = 2 + √2`.
+5. **Nothing escapes at any speed.** Launched at 100× circular speed the trajectory still turns
+   around at finite radius.
+
+**A correction worth recording.** The scratch script mislabelled its own output: it called the
+pericentre-to-pericentre sweep the "apsidal angle" and then computed `360 − 2×that`, printing a
+nonsensical `−149°/orbit`. The measurement was right; the arithmetic layered on top of it was wrong.
+The physics only survived because the raw measured number was compared against the prediction
+directly. The PRP now warns about exactly this confusion and requires the function be named for what
+it returns.
+
+**Design decisions taken rather than deferred**, each stated in the PRP so they can be argued with:
+
+- **Scope is two-body plus insolation.** Debris and the impact cycle are explicitly excluded to a
+  later PRP; including them would double the module and violate the SCOPE RULE. Also excluded:
+  N-body, rotation, day length, tides, and obliquity — a disc has no axis to tilt.
+- **Velocity-Verlet at fixed timestep, and no adaptive stepping.** Not a preference: a non-symplectic
+  integrator *manufactures* apsidal precession, which is the headline quantity being measured. It
+  would return a number that looks plausible, is partly numerical, and cannot be told apart from the
+  physical answer by inspection. The PRP requires demonstrating this once with forward Euler and
+  recording the corrupted number, so the requirement is justified by evidence rather than assertion.
+- **A timestep-convergence test is mandatory**, without which prediction 3 is unverified however
+  good the number looks.
+- **The screening path is the closed forms** from predictions 1–4. Nearly free here, and it
+  cross-checks the integrator independently.
+
+The PRP also makes this the first layer to say anything about **T0.3**, the non-relativistic
+assumption — the one axiom flagged as unvalidated. It must report peak speed so the assumption can
+be checked as soon as a signal speed exists.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/orbit-layer.md   — NEW. Blocked only on approval
+    CONTEXT.md            — this entry
+
+No code. Branched to `sim/orbit-layer`, since `main` now holds released work.
+
+### TESTS WRITTEN
+
+None — not approved. The test list is the substance of the PRP and separates dimensional, invariant,
+physical-prediction, screening, regression and error-path tests.
+
+The scratch verification script was not kept; its results are recorded above and in the PRP, and the
+real tests will re-derive them.
+
+### DECISIONS MADE
+
+None requiring a DECISIONS.md entry. The integrator and scope choices are implementation decisions
+recorded in the PRP, where they can be rejected at approval.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- `PRPs/orbit-layer.md` awaits approval.
+- DECISION-012 still blocks the scan.
+- `docs/AXIOMS.md` §3 still carries the "to be re-confirmed numerically" caveat on apsidal
+  precession. It is now confirmed, but the update is an acceptance criterion of the orbit layer
+  rather than a drive-by edit — §3 should record what the code establishes, not what a scratch
+  script found.
+- The 2+1D graviton count remains a hand derivation. Nothing planned will check it.
 
 ---
 
@@ -623,23 +706,23 @@ Branch: sim/orbit-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order, then `docs/AXIOMS.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
+`PRPs/orbit-layer.md`.
 
-The units layer is done and green. **The next artefact is the PRP for the orbit layer**, not code.
+**If the orbit PRP is approved, implement it test-first**, on branch `sim/orbit-layer`. The two
+acceptance criteria most easily skipped are the ones that matter: mutate the force law to `1/r²` and
+confirm the suite goes red, and demonstrate once with forward Euler that a non-symplectic integrator
+corrupts the precession measurement — that demonstration is the justification for the whole
+integrator requirement.
 
-That PRP should carry two acceptance criteria that finally check hand derivations recorded in
-`docs/AXIOMS.md` §3 and never confirmed numerically:
-- **Apsidal regression of ~105° per orbit** for a near-circular orbit under `F ∝ 1/r`, so a season
-  works round the calendar in ~3.4 orbits. Derived from `ω_r/ω_θ = √2`.
-- **No trajectory is ever unbound**, at any launch speed — the logarithmic potential admits no
-  escape velocity, so an integrator producing an escaping orbit is broken.
+Finish by updating `docs/AXIOMS.md` §3: drop the "to be re-confirmed numerically" caveat from the
+apsidal-precession entry, and add the three consequences that were not previously recorded —
+circular speed independent of radius, `T ∝ r` replacing Kepler's third law, and the `2 + √2` season
+cycle.
 
-It is also the first layer to need architecture rule 8 (a screening path as well as a full solve),
-and the first to consume the stubbed Kell, which must raise rather than default.
+Environment: `.venv/` exists. Run `.venv/bin/pytest`, `.venv/bin/mypy`,
+`.venv/bin/ruff check sim/`.
 
-Environment: `.venv/` exists, created with `uv`; dependencies are declared in `pyproject.toml`.
-Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
-
-Also worth putting to the user: **DECISION-012**, what counts as habitable. It blocks the scan.
+Still open: **DECISION-012**, what counts as habitable. It blocks the scan.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.
