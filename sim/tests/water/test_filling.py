@@ -6,6 +6,8 @@ surfaces equalise. That oracle is obviously correct and far too slow to use,
 which is exactly what an oracle is for.
 """
 
+from typing import ClassVar
+
 import numpy as np
 import pytest
 
@@ -72,7 +74,7 @@ class TestAgainstBruteForce:
     # its level can end up under its own lip. Conservation is unaffected. These
     # are the parameter pairs that expose it; strict, so fixing the defect
     # fails here and forces the markers out.
-    _KNOWN_BAD = {(3, 6.0), (5, 6.0), (6, 6.0), (8, 6.0)}
+    _KNOWN_BAD: ClassVar[set[tuple[int, float]]] = {(3, 6.0), (5, 6.0), (6, 6.0), (8, 6.0)}
 
     @pytest.mark.parametrize("seed", [1, 2, 3, 4, 5, 6, 7, 8])
     @pytest.mark.parametrize("area", [0.4, 2.0, 6.0])
