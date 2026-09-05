@@ -524,6 +524,27 @@ name what it is looking for is not an assertion.
 
 ---
 
+### 26. Reaching a moving body needs selection, not aim
+
+**Decision:** The viewer lists the system's bodies in a sidebar, and selecting one frames it —
+focusing on it and crossing however many orders of magnitude that takes in a single step.
+
+**Why:** at system scale Vellum is three pixels across and crosses the window in seconds, so
+catching it with the pointer and then zooming five orders of magnitude while it moves is not a
+thing a person can do. Selection replaces aim. Framing Vellum jumps the scale from 2.1e2 to 2.6e7
+px per world unit and lands in the PLANETARY band, which is also what re-engages following, since
+the camera deliberately does not chase an orbiting body while the whole system is in view
+(decision 25).
+
+The layout and hit-testing are pure and import no pygame, like the camera — a click landing outside
+the panel is not a selection, so dragging the world still works.
+
+**Rules out:** Requiring the pointer to catch a moving target. Any list entry implying the star has
+ground: Kell's `has_ground` is false, and the radius used to frame it is a **display** value, since
+the real one raises by design.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working

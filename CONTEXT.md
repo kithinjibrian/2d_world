@@ -1649,9 +1649,70 @@ None.
 
 ---
 
-## SESSION 20 — 2026-09-06 — Object sidebar — open
+## SESSION 20 — 2026-09-06 — Object sidebar — closed
 
 Branch: feat/viewer-sidebar
+
+### WHAT WAS DONE
+
+The user could not get onto Vellum. At system scale it is three pixels across and crosses the window
+in seconds, so catching it with the pointer and then zooming five orders of magnitude while it moves
+is not something a person can do. **Selection replaces aim.**
+
+`sim/view/sidebar.py` holds the target list, hit-testing and framing, and imports no pygame — the
+purity test now covers it alongside the camera. `Sidebar` in `render.py` draws the panel. Clicking a
+row selects that body, re-engages following, and frames it.
+
+Measured: framing Vellum takes the scale from `2.13e+02` to `2.62e+07` px per world unit in one
+step — five orders of magnitude — and lands in the PLANETARY band. That last part matters, because
+it is what re-engages following: decision 25 deliberately suppresses chasing an orbiting body while
+the whole system is in view, so the framing is what gets you out of that regime. From there,
+scrolling reaches GROUND with the surface dead centre.
+
+Two details worth keeping:
+
+- **A click outside the panel is not a selection.** `row_at` returns None there, so dragging the
+  world still works and the sidebar does not swallow every gesture.
+- **Kell's framing radius is a display value.** The star is stubbed and its real radius raises by
+  design (DECISION-010), so a test asserts that `Kell.radius` still raises and that the list does not
+  claim the star has ground.
+
+The scale bar and clock readout moved right to clear the panel.
+
+### FILES CREATED OR MODIFIED
+
+    sim/view/sidebar.py            — NEW. Target, row_at, frame. No pygame
+    sim/tests/view/test_sidebar.py — NEW. Hit-testing, framing, and the journey end to end
+    sim/view/render.py             — Sidebar drawable; readout shifted clear of the panel
+    sim/view/app.py                — targets_for; click-to-select; framing on selection
+    sim/tests/view/test_camera.py  — purity test covers sidebar.py
+    MEMORY.md (decision 26), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+423 total, 16 new. Rows map to indices; clicks on the world are not selections; framing centres the
+target, crosses five orders of magnitude for Vellum, leaves the SYSTEM band, respects the zoom
+limits, and keeps the system in view when the star is framed instead. And the journey end to end:
+clicking Vellum's row lands on the planet with following engaged, and the ground is reachable by
+scrolling from there.
+
+### DECISIONS MADE
+
+- Selection frames the target rather than merely focusing it — crossing the scale gap is the point.
+- The sidebar is drawn in every band, since knowing what you are looking at matters most when the
+  view gives no clue.
+- Vellum is selected by default. It is the world.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `feat/viewer-sidebar` unmerged, unpushed.
+- The list has two entries because the system has two bodies. Debris, when it exists, appears here.
+- The ground is still a thin line rather than filled.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1661,18 +1722,16 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-Branch `fix/viewer-system-view` is unmerged. Merge it first.
+Branch `feat/viewer-sidebar` is unmerged. Merge it first, then run the viewer: click **Vellum** in
+the sidebar to be taken to it, scroll in to reach the ground, and press `space` to watch day and
+night cross.
 
 **The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
 follow from having no third direction. The first layer that can produce a number the monograph only
 guessed — the basin count. Use `sim.periodic.distance` for anything comparing surface positions.
 
-Carry two lessons forward. From Session 14 and again from this one: **a visual test must name what
-it is looking for.** "Not background" passed here whether or not the planet was drawn, because its
-own orbit ran through the same pixels. And from this session: **anything that can shrink below a
-pixel needs a minimum drawn size**, which will apply to every creature the life layer adds.
-
 Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
+And the ground is drawn as a thin line, which will matter more once water is drawn against it.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

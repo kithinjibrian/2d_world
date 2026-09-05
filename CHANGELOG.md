@@ -35,6 +35,9 @@ Never deleted. Older entries are never modified.
   that reflects a choice can never be mistaken for a finding about two-dimensional physics.
 
 ### Added
+- A list of what is in the system, down the side of the viewer. Clicking a body takes you to it —
+  which is the only practical way to reach Vellum, since at system scale it is three pixels across
+  and crosses the window in seconds.
 - **Vellum turns on itself, and so has a day.** A point on the surface now passes through daylight
   and night as the world rotates, the terminator crosses the ground as two moving points rather
   than a line, and how much of the world is lit depends on how close the star is — exactly a third

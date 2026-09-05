@@ -7,6 +7,7 @@ checked by reading.
 
 Controls
 --------
+    click a row     select a body and be taken to it
     drag            pan; on the ground, walks along it and changes height
     scroll / + -    zoom about the cursor, on the ground too
     arrow keys      pan; left/right walks along the ground when zoomed in
@@ -27,6 +28,8 @@ Used by: run as ``python -m sim.view.app``
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 import pygame
 
@@ -38,8 +41,16 @@ from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
 from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
-from sim.view.render import OrbitTrace, PlanetDisc, ScaleBar, StarDisc, TerrainTrace
+from sim.view.render import (
+    OrbitTrace,
+    PlanetDisc,
+    ScaleBar,
+    Sidebar,
+    StarDisc,
+    TerrainTrace,
+)
 from sim.view.scene import Scene
+from sim.view.sidebar import Target, frame, row_at
 
 __all__ = ["main", "run"]
 
@@ -47,6 +58,7 @@ _BACKGROUND = (14, 18, 16)
 _ZOOM_STEP = 1.25
 _PAN_FRACTION = 0.08
 _TIMESTEP = 2e-3
+_STAR_DISPLAY_RADIUS = 0.02
 _MIN_WIDTH = 960
 _MIN_HEIGHT = 600
 
@@ -137,6 +149,8 @@ def run(width: int | None = None, height: int | None = None) -> None:
     dragging = False
     #: Whether time advances on its own. Watching the world turn needs it.
     running_clock = True
+    #: Which body the camera is watching. Vellum by default -- it is the world.
+    selected: int | None = 1
 
     while running:
         for event in pygame.event.get():
@@ -148,7 +162,17 @@ def run(width: int | None = None, height: int | None = None) -> None:
                 )
                 camera = camera.resized(event.w, event.h)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2):
-                dragging = True
+                mx, my = pygame.mouse.get_pos()
+                picked = row_at(float(mx), float(my), len(targets_for(star, planet)))
+                if picked is None:
+                    dragging = True
+                else:
+                    # Selecting takes you there. Chasing Vellum by hand is not
+                    # a realistic option: it crosses the window in seconds.
+                    selected = picked
+                    following = True
+                    anchor_height = 0.0
+                    camera = frame(camera, targets_for(star, planet)[picked])
             elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2):
                 dragging = False
             elif event.type == pygame.MOUSEMOTION and dragging:
@@ -186,8 +210,10 @@ def run(width: int | None = None, height: int | None = None) -> None:
             centre_y=float(position[1]),
             circumference=planet.circumference,
         )
+        targets = targets_for(star, planet)
         scene = _rebuild(
-            star, trajectory, planet, terrain, spin, step * _TIMESTEP, running_clock
+            star, trajectory, planet, terrain, spin, step * _TIMESTEP, running_clock,
+            targets, selected,
         )
         looking = _camera_for(camera, planet, following, anchor, anchor_height)
 
@@ -283,6 +309,20 @@ def _on_zoom(
     )
 
 
+def targets_for(star: Kell, planet: Disc) -> list[Target]:
+    """Return what is in the system right now, for the sidebar.
+
+    Rebuilt each frame because Vellum moves. Kell's radius here is a display
+    value: the star is stubbed and its real radius raises (DECISION-010), so
+    nothing framed from it is a physical result.
+    """
+    return [
+        Target("Kell", 0.0, 0.0, radius=_STAR_DISPLAY_RADIUS),
+        Target("Vellum", planet.centre_x, planet.centre_y,
+               radius=planet.radius, surface=planet),
+    ]
+
+
 def _camera_for(
     camera: Camera,
     planet: Disc,
@@ -320,6 +360,8 @@ def _rebuild(
     spin: Spin | None = None,
     time: float = 0.0,
     clock_running: bool = True,
+    targets: Sequence[Target] = (),
+    selected: int | None = None,
 ) -> Scene:
     scene = Scene()
     scene.add(StarDisc(star))
@@ -328,6 +370,7 @@ def _rebuild(
     ground = TerrainTrace(planet, terrain, spin=spin)
     ground.time = time
     scene.add(ground)
+    scene.add(Sidebar(targets, selected))
     bar = ScaleBar(terrain, spin)
     bar.time = time
     bar.clock_running = clock_running

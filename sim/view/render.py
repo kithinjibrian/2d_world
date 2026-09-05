@@ -19,6 +19,7 @@ Used by: sim.view.app
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from typing import Final, cast
 
 import numpy as np
@@ -33,8 +34,16 @@ from sim.units import LENGTH, Quantity
 from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
+from sim.view.sidebar import PANEL_WIDTH, ROW_HEIGHT, TOP, Target
 
-__all__ = ["OrbitTrace", "PlanetDisc", "ScaleBar", "StarDisc", "TerrainTrace"]
+__all__ = [
+    "OrbitTrace",
+    "PlanetDisc",
+    "ScaleBar",
+    "Sidebar",
+    "StarDisc",
+    "TerrainTrace",
+]
 
 _INK: Final = (232, 236, 228)
 _DIM: Final = (96, 108, 100)
@@ -42,6 +51,7 @@ _GOLD: Final = (198, 160, 70)
 _TEAL: Final = (74, 176, 158)
 _DAY: Final = (214, 196, 142)
 _NIGHT: Final = (44, 62, 60)
+_RULE: Final = (52, 66, 62)
 #: Vellum's own marker colour. Distinct from the orbit trace so a test can
 #: tell whether the planet was drawn or merely overlapped by its own path.
 VELLUM: Final = (126, 214, 200)
@@ -194,9 +204,10 @@ class ScaleBar:
         pixels = int(span / mpp)
 
         y = camera.height - 28
-        pygame.draw.line(surface, _INK, (20, y), (20 + pixels, y), 1)
-        pygame.draw.line(surface, _INK, (20, y - 4), (20, y + 4), 1)
-        pygame.draw.line(surface, _INK, (20 + pixels, y - 4), (20 + pixels, y + 4), 1)
+        left = PANEL_WIDTH + 20
+        pygame.draw.line(surface, _INK, (left, y), (left + pixels, y), 1)
+        pygame.draw.line(surface, _INK, (left, y - 4), (left, y + 4), 1)
+        pygame.draw.line(surface, _INK, (left + pixels, y - 4), (left + pixels, y + 4), 1)
 
         if pygame.font.get_init():
             font = pygame.font.Font(None, 18)
@@ -205,14 +216,14 @@ class ScaleBar:
                 label += "   [zoom limit]"
             if self._terrain is not None and self._terrain.is_clamped_at(mpp):
                 label += "   [below terrain detail]"
-            surface.blit(font.render(label, True, _INK), (20, y + 8))
+            surface.blit(font.render(label, True, _INK), (left, y + 8))
 
             state = "running" if self.clock_running else "paused"
             clock = f"t = {self.time:.4f}   [{state} — space]"
             if self._spin is not None and self._spin.sidereal_day > 0.0:
                 days = self.time / self._spin.sidereal_day
                 clock = f"day {days:.2f}   " + clock
-            surface.blit(font.render(clock, True, _DIM), (20, y + 24))
+            surface.blit(font.render(clock, True, _DIM), (left, y + 24))
 
 
 class TerrainTrace:
@@ -315,3 +326,54 @@ class TerrainTrace:
         pygame.draw.aalines(
             surface, _DAY if lit[start] else _NIGHT, False, points[start:]
         )
+
+
+class Sidebar:
+    """A list of what is in the system, and which of it you are watching.
+
+    Vellum crosses the window in seconds at system scale and is three pixels
+    across there, so catching it with the pointer is not a realistic way in.
+    Selecting it from a list is.
+
+    Drawn in screen space at every zoom, because knowing what you are looking
+    at matters most when the view gives no clue.
+    """
+
+    bands: Final = frozenset(ScaleBand)
+
+    def __init__(self, targets: Sequence[Target], selected: int | None = None) -> None:
+        self._targets = list(targets)
+        self._selected = selected
+
+    def draw(self, camera: Camera, target: object) -> None:
+        surface = cast(pygame.Surface, target)
+        panel = pygame.Surface((PANEL_WIDTH, camera.height), pygame.SRCALPHA)
+        panel.fill((10, 14, 13, 215))
+        surface.blit(panel, (0, 0))
+        pygame.draw.line(
+            surface, _RULE, (PANEL_WIDTH, 0), (PANEL_WIDTH, camera.height), 1
+        )
+        if not pygame.font.get_init():
+            return
+
+        heading = pygame.font.Font(None, 20)
+        surface.blit(heading.render("THE SYSTEM OF KELL", True, _DIM), (16, 22))
+
+        font = pygame.font.Font(None, 22)
+        for index, item in enumerate(self._targets):
+            top = TOP + index * ROW_HEIGHT
+            chosen = index == self._selected
+            if chosen:
+                pygame.draw.rect(
+                    surface, (26, 40, 38), pygame.Rect(0, top, PANEL_WIDTH, ROW_HEIGHT)
+                )
+                pygame.draw.rect(
+                    surface, _TEAL, pygame.Rect(0, top, 3, ROW_HEIGHT)
+                )
+            colour = _INK if chosen else _DIM
+            surface.blit(font.render(item.name, True, colour), (16, top + 7))
+            if item.has_ground:
+                surface.blit(
+                    pygame.font.Font(None, 17).render("ground", True, _DIM),
+                    (PANEL_WIDTH - 58, top + 10),
+                )

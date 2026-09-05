@@ -194,7 +194,7 @@ class TestPurity:
     """
 
     @pytest.mark.parametrize(
-        "module", ["camera.py", "bands.py", "geometry.py", "scene.py"]
+        "module", ["camera.py", "bands.py", "geometry.py", "scene.py", "sidebar.py"]
     )
     def test_pure_modules_import_no_pygame(self, module: str) -> None:
         source = Path("sim/view", module).read_text()
