@@ -18,18 +18,21 @@ Used by: sim.view.app
 
 from __future__ import annotations
 
+import math
 from typing import Final, cast
 
 import numpy as np
 import pygame
+from numpy.typing import NDArray
 
 from sim.orbit import Trajectory
 from sim.star import Kell
+from sim.surface import Terrain
 from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
 
-__all__ = ["OrbitTrace", "PlanetDisc", "ScaleBar", "StarDisc"]
+__all__ = ["OrbitTrace", "PlanetDisc", "ScaleBar", "StarDisc", "TerrainTrace"]
 
 _INK: Final = (232, 236, 228)
 _DIM: Final = (96, 108, 100)
@@ -123,9 +126,18 @@ class PlanetDisc:
 
 
 class ScaleBar:
-    """A bar and a readout. Without it eleven decades of zoom disorient fast."""
+    """A bar and a readout. Without it eleven decades of zoom disorient fast.
+
+    It also says when the zoom has passed the terrain's resolution floor. Below
+    that there is no more detail, and the ground drawn is the finest the field
+    contains rather than something invented -- the viewer should say so instead
+    of showing convincing smoothness.
+    """
 
     bands: Final = frozenset(ScaleBand)
+
+    def __init__(self, terrain: Terrain | None = None) -> None:
+        self._terrain = terrain
 
     def draw(self, camera: Camera, target: object) -> None:
         surface = cast(pygame.Surface, target)
@@ -146,4 +158,64 @@ class ScaleBar:
             label = f"{span:.0e} world units   |   {camera.band.value}"
             if camera.is_clamped:
                 label += "   [zoom limit]"
+            if self._terrain is not None and self._terrain.is_clamped_at(mpp):
+                label += "   [below terrain detail]"
             surface.blit(font.render(label, True, _INK), (20, y + 8))
+
+
+class TerrainTrace:
+    """Vellum's ground, sampled at roughly screen resolution.
+
+    Samples only the arc the viewport covers, at about one sample per pixel, so
+    the cost is set by the window rather than by the world. Terrain is queried
+    at the zoom's own resolution -- a whole-world profile does not pay for metre
+    detail, and a metre of ground gets it, down to the terrain's floor.
+
+    Positions reach the screen through ``camera.surface_to_screen``, which
+    composes them from the planet centre rather than as absolute world
+    coordinates. That is what keeps ground detail from being quantised by the
+    planet's distance from Kell.
+    """
+
+    bands: Final = frozenset(
+        {ScaleBand.GROUND, ScaleBand.REGIONAL, ScaleBand.PLANETARY}
+    )
+
+    def __init__(self, planet: Disc, terrain: Terrain, samples: int = 900) -> None:
+        self._planet = planet
+        self._terrain = terrain
+        self._samples = samples
+
+    def visible_arc(self, camera: Camera) -> NDArray[np.float64]:
+        """Return the surface positions this camera can see."""
+        planet = self._planet
+        # The arc subtended by the viewport, capped at the whole world.
+        half = min(
+            planet.circumference * 0.5,
+            camera.span * 0.75,
+        )
+        centre = math.atan2(
+            camera.focus_y - planet.centre_y, camera.focus_x - planet.centre_x
+        ) * planet.circumference / (2.0 * math.pi)
+        return np.linspace(centre - half, centre + half, self._samples)
+
+    def sample_heights(self, camera: Camera) -> NDArray[np.float64]:
+        """Return terrain heights across the visible arc, at screen resolution."""
+        arc = self.visible_arc(camera)
+        resolution = max(
+            self._terrain.resolution_floor,
+            float(abs(arc[-1] - arc[0])) / max(1, self._samples),
+        )
+        return self._terrain.height(arc, resolution=resolution)
+
+    def draw(self, camera: Camera, target: object) -> None:
+        surface = cast(pygame.Surface, target)
+        arc = self.visible_arc(camera)
+        heights = self.sample_heights(camera)
+        xs, ys = camera.surface_to_screen(self._planet, arc, heights)
+        points = [
+            _point((x, y))
+            for x, y in zip(np.asarray(xs), np.asarray(ys), strict=True)
+        ]
+        if len(points) > 1:
+            pygame.draw.aalines(surface, _TEAL, False, points)

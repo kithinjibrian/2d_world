@@ -1073,9 +1073,90 @@ None.
 
 ---
 
-## SESSION 13 — 2026-09-05 — Surface layer implementation — open
+## SESSION 13 — 2026-09-05 — Surface layer implementation — closed
 
 Branch: sim/surface-layer
+
+### WHAT WAS DONE
+
+Implemented the surface layer test-first. **284 tests**, all passing headless, `mypy --strict` and
+`ruff` clean. Vellum has ground, and it is visible in the viewer from the whole disc down to a
+stretch of terrain.
+
+`sim/surface/noise.py` is one octave of periodic gradient noise: a splitmix64 hash on a lattice
+index taken **modulo the octave's cell count**, which is what makes the field exactly periodic
+rather than stitched. `sim/surface/terrain.py` sums octaves, normalises to a requested RMS, and adds
+an optional sampled residual. `TerrainTrace` draws it through `camera.surface_to_screen`, so ground
+detail is composed from the planet centre and never quantised by the planet's distance from Kell.
+
+**One measured correction, and it is the kind that is invisible by inspection.** The octave decay
+needed to deliver a spectral slope is off by one from the obvious derivation. Power at octave `n`
+goes as `A_n²`, so `A_n ∝ 2^(-βn/2)` should give `P(k) ~ k^-β` — and measured, it gives `-(β+1)`.
+The missing factor is **mode density**: in one dimension the band `[2^n, 2^(n+1))` holds about `2^n`
+Fourier modes, so power *per mode* carries an extra `k^-1`. Measured across decay exponents:
+
+    p = 0.5   slope -1.976
+    p = 1.0   slope -2.961
+    p = 1.5   slope -3.924        => slope = -(2p + 1), exactly
+
+So the decay is `2^(-(β-1)n/2)`. After the fix, requested roughness 1.5, 2.0, 2.5 and 3.0 measure
+-1.49, -1.98, -2.48 and -2.96. The terrain looked entirely plausible at the wrong exponent; only an
+FFT of the field distinguishes fractal ground from ground that is merely rough.
+
+**The resolution floor is real and is reported.** With 22 octaves on the demo world the floor is
+`C / 2**22`, and the viewer's readout says *below terrain detail* once the zoom passes it. "Evaluable
+at any resolution" was always an overstatement; the layer states the limit instead of returning
+convincing smoothness.
+
+**Terrain statistics are abstracted.** Amplitude and roughness are world constants with an entry in
+the `docs/AXIOMS.md` §4 ledger, and the module carries an `Abstracts:` line. No result about
+mountains, slopes or basin shapes is a finding about two-dimensional physics.
+
+### MUTATION RESULTS
+
+    remove the lattice modulo         6 failed   caught (periodicity)
+    uniform octave amplitudes         4 failed   caught (spectral slope)
+    drop the residual seam wrap       1 failed   caught
+
+### FILES CREATED OR MODIFIED
+
+    sim/surface/noise.py      — NEW. Periodic gradient noise, splitmix64 hash
+    sim/surface/terrain.py    — NEW. Octave sum, RMS normalisation, residual, floor reporting
+    sim/surface/__init__.py   — NEW
+    sim/tests/surface/*.py    — NEW, two files
+    sim/view/render.py        — TerrainTrace; ScaleBar reports the terrain floor
+    sim/view/app.py           — terrain wired into the demo world
+    sim/tests/view/test_render.py — TerrainTrace tests
+    MEMORY.md (decision 20), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+284 total, 56 new. Exact periodicity at every octave count and after seven circumferences; seam
+continuity; determinism; resolution consistency between a lone point and a dense array; RMS matching
+the configured amplitude; **power-spectrum slope matching the configured roughness**, which is the
+test that separates fractal terrain from noise; residual arithmetic and its periodic interpolation;
+the resolution floor and its clamping report; and an AST check that the noise module never calls
+Python's `hash()`, which is randomised per process and would break determinism between runs.
+
+### DECISIONS MADE
+
+- Octave decay is `2^(-(β-1)n/2)`; see MEMORY.md decision 20.
+- Normalisation measures the field's RMS once at construction over a fixed deterministic sweep,
+  rather than baking in a magic constant for unit-noise variance.
+- The demo world's amplitude and roughness are tagged `WORLD CONSTANT` in `app.py`, not left as
+  bare numbers.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `sim/surface-layer` is unmerged and unpushed.
+- No water, no basins. That is the next layer.
+- DECISION-012, -013, -014 still open.
+- The terrain residual exists and is exercised by tests, but nothing writes to it yet — erosion and
+  craters are what it is for, and both need their own PRP.
 
 ---
 
@@ -1083,19 +1164,23 @@ Branch: sim/surface-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
-`PRPs/surface-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-**If the surface PRP is approved, implement it test-first** on branch `sim/surface-layer`. Two
-acceptance criteria are the ones that will be tempting to skip and are the point: remove the lattice
-modulo and confirm the periodicity test goes red, and make the octave amplitudes uniform and confirm
-the power-spectrum test goes red. The second is what separates fractal terrain from noise.
+The surface layer is complete and green on branch `sim/surface-layer`, unmerged. Merge it first.
 
-Approval also covers two new free parameters — roughness and amplitude — which are world constants,
-not derived quantities.
+**The next PRP is water** — the layer where two dimensions bite hardest, and where almost everything
+follows from T0.1 with no new physics. A basin is a local minimum of `h`; filling it is a
+one-dimensional problem, not a watershed. **A river cannot branch**, because a tributary would have
+to arrive from a side that does not exist, so there are no confluences and no deltas — only single
+unbranched runs. And a basin has no drainage network at all: what is sealed in one is sealed for
+good.
 
-After the surface, water is the natural next layer: basins as local minima, filling, the unbranched
-runs that follow from having no third direction, and the anoxic depth.
+Scope it as basin detection and filling. Leave stratification and the anoxic depth to a
+climate-facing layer, and leave erosion — which writes to the terrain residual — to its own PRP.
+
+Carry the Session 13 lesson: **measure a normalisation against the thing it is supposed to produce.**
+The octave decay was off by exactly the one-dimensional mode-density factor, the terrain looked
+perfectly plausible either way, and only an FFT of the field caught it.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

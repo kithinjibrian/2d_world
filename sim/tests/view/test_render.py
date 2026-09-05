@@ -15,6 +15,7 @@ import pygame
 
 from sim.orbit import circular_speed, integrate
 from sim.star import Kell
+from sim.surface import Terrain
 from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
 from sim.view import (
     Camera,
@@ -27,6 +28,7 @@ from sim.view.render import (
     PlanetDisc,
     ScaleBar,
     StarDisc,
+    TerrainTrace,
 )
 
 
@@ -88,3 +90,45 @@ class TestBandDeclarations:
         for drawable in (StarDisc(KELL), OrbitTrace(trajectory), PlanetDisc(PLANET), ScaleBar()):
             assert drawable.bands
             assert all(isinstance(b, ScaleBand) for b in drawable.bands)
+
+
+class TestTerrainTrace:
+    """The drawable that finally puts ground on the disc."""
+
+    TERRAIN = Terrain(
+        circumference=PLANET.circumference,
+        amplitude=PLANET.circumference * 1e-3,
+        roughness=2.0,
+        seed=4,
+        octaves=14,
+    )
+
+    def test_declares_bands(self) -> None:
+        trace = TerrainTrace(PLANET, self.TERRAIN)
+        assert trace.bands
+        assert ScaleBand.GROUND in trace.bands
+
+    def test_draws_at_every_declared_band(self, surface) -> None:  # type: ignore[no-untyped-def]
+        trace = TerrainTrace(PLANET, self.TERRAIN)
+        for scale in (1e2, 1e4, 1e6, 1e8):
+            camera = Camera(
+                focus_x=PLANET.centre_x, focus_y=0.0, scale=scale,
+                width=400, height=300, reference_length=PLANET.circumference,
+            )
+            surface.fill((0, 0, 0))
+            if camera.band in trace.bands:
+                trace.draw(camera, surface)
+
+    def test_the_profile_is_not_a_circle(self, surface) -> None:  # type: ignore[no-untyped-def]
+        """The whole point of the layer: ground that is not smooth.
+
+        Sampled directly rather than by inspecting pixels, so the assertion is
+        about the terrain reaching the screen, not about anti-aliasing.
+        """
+        camera = Camera(
+            focus_x=PLANET.centre_x, focus_y=0.0, scale=1e6,
+            width=400, height=300, reference_length=PLANET.circumference,
+        )
+        trace = TerrainTrace(PLANET, self.TERRAIN)
+        heights = trace.sample_heights(camera)
+        assert float(np.std(heights)) > 0.0

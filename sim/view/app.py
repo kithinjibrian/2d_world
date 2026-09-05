@@ -28,10 +28,11 @@ import pygame
 
 from sim.orbit import Trajectory, circular_speed, integrate
 from sim.star import Kell
+from sim.surface import Terrain
 from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
-from sim.view.render import OrbitTrace, PlanetDisc, ScaleBar, StarDisc
+from sim.view.render import OrbitTrace, PlanetDisc, ScaleBar, StarDisc, TerrainTrace
 from sim.view.scene import Scene
 
 __all__ = ["main", "run"]
@@ -41,12 +42,15 @@ _ZOOM_STEP = 1.25
 _PAN_FRACTION = 0.08
 
 
-def _demo_world() -> tuple[Kell, Trajectory, Disc]:
-    """Build the only world there is to look at yet.
+def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
+    """Build the world there is to look at so far.
 
-    A star, an orbit, and a bare disc. There is no terrain, water or life --
-    those layers do not exist, and the viewer was deliberately built before
-    them (DECISION-016) so each becomes visible the moment it lands.
+    A star, an orbit, a disc, and ground. Water, air and life do not exist
+    yet; the viewer was built before them (DECISION-016) so each becomes
+    visible the moment it lands, and terrain is the first to do so.
+
+    The terrain's amplitude and roughness are **world constants, not derived**
+    -- see docs/AXIOMS.md section 4.
     """
     star = Kell(mass=Quantity(1.0, MASS), luminosity=Quantity(1.0, LUMINOSITY))
     speed = circular_speed(star.mass, Quantity(1.0, LENGTH)).scalar(VELOCITY)
@@ -61,7 +65,16 @@ def _demo_world() -> tuple[Kell, Trajectory, Disc]:
     # zooming from the whole system to a stretch of ground spans the eleven
     # decades this viewer exists for.
     planet = Disc(centre_x=1.0, centre_y=0.0, circumference=3.84e-5)
-    return star, trajectory, planet
+    terrain = Terrain(
+        circumference=planet.circumference,
+        # WORLD CONSTANT: mountains about a thousandth of the world around.
+        amplitude=planet.circumference * 8e-4,
+        # WORLD CONSTANT: P(k) ~ k^-2, the fractional-Brownian default.
+        roughness=2.0,
+        seed=20260905,
+        octaves=22,
+    )
+    return star, trajectory, planet, terrain
 
 
 def run(width: int = 1280, height: int = 800) -> None:
@@ -71,12 +84,8 @@ def run(width: int = 1280, height: int = 800) -> None:
     surface = pygame.display.set_mode((width, height))
     clock = pygame.time.Clock()
 
-    star, trajectory, planet = _demo_world()
-    scene = Scene()
-    scene.add(StarDisc(star))
-    scene.add(OrbitTrace(trajectory))
-    scene.add(PlanetDisc(planet))
-    scene.add(ScaleBar())
+    star, trajectory, planet, terrain = _demo_world()
+    scene = _rebuild(star, trajectory, planet, terrain)
 
     camera = Camera(
         focus_x=0.0,
@@ -109,7 +118,7 @@ def run(width: int = 1280, height: int = 800) -> None:
             centre_y=float(position[1]),
             circumference=planet.circumference,
         )
-        scene = _rebuild(star, trajectory, planet)
+        scene = _rebuild(star, trajectory, planet, terrain)
         if following:
             camera = camera.focused_on(planet.centre_x, planet.centre_y)
 
@@ -121,12 +130,15 @@ def run(width: int = 1280, height: int = 800) -> None:
     pygame.quit()
 
 
-def _rebuild(star: Kell, trajectory: Trajectory, planet: Disc) -> Scene:
+def _rebuild(
+    star: Kell, trajectory: Trajectory, planet: Disc, terrain: Terrain
+) -> Scene:
     scene = Scene()
     scene.add(StarDisc(star))
     scene.add(OrbitTrace(trajectory))
     scene.add(PlanetDisc(planet))
-    scene.add(ScaleBar())
+    scene.add(TerrainTrace(planet, terrain))
+    scene.add(ScaleBar(terrain))
     return scene
 
 

@@ -9,6 +9,10 @@ Never deleted. Older entries are never modified.
 ## [Unreleased]
 
 ### Added
+- Vellum has ground. A height field on the closed surface, evaluable at any position and any
+  resolution down to a stated floor, exactly periodic so there is no seam to find, and identical
+  every time from the same seed. Visible in the viewer from the whole disc down to a stretch of
+  ground.
 - A viewer. A window that zooms continuously from the whole Kell system down to a sliver of
   Vellum's surface, with panning that wraps because the surface has no edge. Today it draws the
   star, the orbit and a bare disc; each future layer becomes visible the moment it lands.

@@ -391,9 +391,30 @@ in the §4 ledger, so no result about mountains or slopes is a finding about two
 
 ---
 
+### 20. The octave decay that delivers a spectral slope is off by one from the obvious formula
+
+**Decision:** Octave amplitudes fall as `2**(-(β-1)·n/2)` to deliver `P(k) ~ k^-β`, not
+`2**(-β·n/2)`.
+
+**Why:** The obvious derivation says power at octave `n` goes as `A_n²`, so `A_n ∝ 2^(-βn/2)` gives
+`P(k) ~ k^-β`. Measured, that produces a slope of `-(β+1)`. The missing factor is **mode density**:
+in one dimension the octave band `[2^n, 2^(n+1))` contains about `2^n` Fourier modes, so power *per
+mode* carries an extra `k^-1`. Verified across decay exponents — `p = 0.5, 1.0, 1.5` measure
+`-1.98, -2.96, -3.92`, i.e. `slope = -(2p+1)` exactly.
+
+**Rules out:** Trusting a spectral normalisation that has not been measured against an FFT of the
+field it produces. The error is invisible by inspection — the terrain looks perfectly plausible at
+either exponent, and only a spectrum test distinguishes fractal ground from ground that is merely
+rough.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
+- **`sim/surface/`** — periodic multi-octave gradient noise plus an optional sampled residual.
+  Exactly periodic, deterministic, evaluable at any resolution down to `C / 2**octaves`, with the
+  floor reported rather than smoothed over.
 - **`sim/view/`** — a window that zooms from the whole system to a sliver of surface. Camera,
   bands, geometry and scene are pure and tested headless; only `render.py` and `app.py` touch a
   display. Run with `python -m sim.view.app`.
@@ -414,8 +435,7 @@ in the §4 ledger, so no result about mountains or slopes is a finding about two
 - Nothing. The orbit layer is complete; the next layer has no PRP yet.
 
 ### Not Started
-- The surface layer. `PRPs/surface-layer.md` is written and awaits approval.
-- planet, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
+- water, planet, air, life. Erosion and craters, which are what the terrain residual exists for. None has a PRP. Debris and the impact cycle were explicitly
   deferred out of the orbit layer and need one.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate
   deciding which grid points count as habitable is DECISION-012 and still open.
@@ -426,21 +446,18 @@ in the §4 ledger, so no result about mountains or slopes is a finding about two
 
 Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md, then `docs/AXIOMS.md`.
 
-The viewer is complete and green: 228 tests, headless, `mypy --strict` and `ruff` clean. Run it with
-`.venv/bin/python -m sim.view.app` — scroll to zoom, arrows to pan, `f` to stop following Vellum,
-`home` to reframe.
+Vellum has ground. 284 tests, headless, `mypy --strict` and `ruff` clean. Run
+`.venv/bin/python -m sim.view.app` and zoom from the whole disc to a stretch of terrain.
 
-**The next PRP is the surface layer**, and it is now the one that unlocks everything: it is what the
-viewer was built to show, and DECISION-017 must be answered first — is terrain a sampled raster or a
-field evaluable at any resolution? The recommendation is a spectral base field, because the viewer
-will ask for `h(x)` at eleven different scales and a raster fixes a resolution forever.
+**The next PRP is water**, and it is the layer where two dimensions bite hardest. On a closed curve
+with no third direction: a basin is a local minimum of `h`, filling it is a 1D problem rather than a
+watershed, **rivers cannot branch** because a tributary would have to arrive from a side that does
+not exist, and a basin has no drainage network at all — a population sealed in one is sealed
+forever. All of that follows from T0.1 and none of it needs new physics. Scope it as basin
+detection and filling; leave the anoxic depth and lake stratification to a climate-facing layer.
 
-Adding a layer to the view is deliberately small: give it a `bands` attribute and a
-`draw(camera, target)`, use `camera.surface_to_screen` for anything on the ground rather than an
-absolute world position, and `visible_surface_indices` to cull. That is the whole contract.
-
-Also still open: DECISION-012 (habitability predicate, blocks the scan), -013 (chemistry), -014
-(grey vs spectral transfer).
+Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (grey vs
+spectral transfer).
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
