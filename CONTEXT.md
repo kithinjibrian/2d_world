@@ -822,6 +822,12 @@ None.
 
 ---
 
+## SESSION 10 — 2026-09-05 — Viewer PRP — open
+
+Branch: sim/viewer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
