@@ -1784,9 +1784,91 @@ None.
 
 ---
 
-## SESSION 22 — 2026-09-06 — Water layer PRP — open
+## SESSION 22 — 2026-09-06 — Water layer PRP — closed
 
 Branch: sim/water-layer
+
+### WHAT WAS DONE
+
+Wrote `PRPs/water-layer.md`. No code — it awaits approval and introduces one new free parameter, the
+total water area.
+
+Seven consequences were derived before writing, so the PRP rests on the geometry rather than on
+expectation. A basin is a local minimum, and filling it is one-dimensional rather than a watershed.
+**A basin's catchment is a contiguous arc** — in three dimensions a drainage basin can be any shape;
+here it is an interval, and that is a theorem, which makes it testable. Rivers cannot branch, so
+there are no confluences, though discharge still accumulates along the single channel. Each basin
+has exactly one outlet, the lower of its two enclosing maxima. A basin that never fills to its lip
+has no outlet at all, which is the property the monograph's fish depend on. **Water quantity is an
+area, not a volume**, since the world is two-dimensional. And the basin structure is a merge tree,
+which in one dimension is a sort plus union-find.
+
+### THE FINDING THAT CHANGES WHAT THE LAYER SHOULD REPORT
+
+**"How many basins are there" is not a well-defined question**, and this was worth discovering before
+writing code that answers it. Terrain is fractal, so the number of local minima is a function of the
+sampling:
+
+    samples     resolution     local minima
+      1,024      3.75e-08              207
+      4,096      9.38e-09              830
+     16,384      2.34e-09            3,313
+     65,536      5.86e-10           12,980
+    262,144      1.46e-10           52,101
+
+The count quadruples with the sampling. Counting minima means choosing the answer.
+
+The scale-free alternative is **topological persistence** — a basin's depth below the point where it
+merges into a deeper one. Computed properly, by flooding upward with union-find rather than by
+comparing neighbouring maxima, which was a first attempt and measured only the shallowest possible
+interpretation:
+
+    depth greater than      basins
+      0.01 × RMS height      7,158
+      0.05 × RMS               1,677
+      0.10 × RMS                 582
+      0.25 × RMS                 116
+      0.50 × RMS                  36
+      1.00 × RMS                   8
+
+**So the monograph's "eleven hundred and six" sealed basins is not a number this project can confirm
+or refute.** It corresponds to some persistence threshold and to no property of the world. Somewhere
+near 0.07 × RMS would produce roughly that count — which is exactly why the PRP forbids looking for
+it. Choosing the threshold that reproduces a guess is fitting, dressed as a result.
+
+The honest output is the **curve**, and any single count must state the threshold that produced it.
+The PRP requires that, forbids a bare number, and makes "do not tune toward 1,106" explicit.
+
+A sanity check that the merge tree is right: 65,536 samples gave 65,535 merge events, one fewer than
+the samples, which is what a merge tree over a connected structure must produce.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/water-layer.md   — NEW. Awaits approval
+    CONTEXT.md            — this entry
+
+### TESTS WRITTEN
+
+None — not approved. Two acceptance criteria are the ones that matter: water-area conservation must
+fail if the cascade drops overflow rather than passing it on, and the contiguous-catchment test must
+fail if the catchment map is built by nearest-minimum rather than by descent. Both by mutation.
+
+The PRP also requires a test that persistence is stable under refinement **while raw minima counts
+are not** — asserting both halves, since the second is what shows why persistence is used at all.
+
+### DECISIONS MADE
+
+None. One new free parameter, the total water area, is sent for approval with the PRP.
+
+### PENDING DECISIONS OPENED
+
+None. DECISION-013 would matter for ice and salinity; neither is in scope.
+
+### STILL OPEN AT CLOSE
+
+- `PRPs/water-layer.md` awaits approval. Branch `sim/water-layer` unmerged, unpushed.
+- Vellum is dry.
+- DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1794,19 +1876,24 @@ Branch: sim/water-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
+`PRPs/water-layer.md`.
 
-Branch `fix/terrain-runs` is unmerged. Merge it first.
+**If the water PRP is approved, implement it test-first** on branch `sim/water-layer`. Approval also
+covers one new free parameter: the total water area, a world constant.
 
-**The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
-follow from having no third direction. The first layer that can produce a number the monograph only
-guessed — the basin count. Use `sim.periodic.distance` for anything comparing surface positions.
+The two mutations that matter: dropping the cascade's overflow must break water-area conservation,
+and building the catchment map by nearest-minimum rather than by descent must break the
+contiguous-arc test. And the layer must report a basin *curve* against persistence, never a bare
+count — the number is a function of the threshold, which is why the monograph's 1,106 is not a
+target and not a check.
 
-Carry the Session 21 lesson: **logic inside a `draw` method cannot be tested, so it should not be
-there.** 516 rendered frames produced 239 terminators and never the shape that crashed. Rendering
-samples one trajectory through the input space, not the space.
+The viewer work includes filling the ground below the terrain profile, which has been outstanding
+since the surface layer and now has a reason: water sitting against an unfilled outline reads as a
+line drawing rather than a world.
 
-Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
+Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry, would matter for ice
+and salinity), -014 (transfer).
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
