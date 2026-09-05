@@ -1249,6 +1249,12 @@ None.
 
 ---
 
+## SESSION 15 — 2026-09-05 — Bigger window, mouse panning — open
+
+Branch: feat/viewer-input
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
