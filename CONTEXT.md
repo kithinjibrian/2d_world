@@ -1073,6 +1073,12 @@ None.
 
 ---
 
+## SESSION 13 — 2026-09-05 — Surface layer implementation — open
+
+Branch: sim/surface-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
