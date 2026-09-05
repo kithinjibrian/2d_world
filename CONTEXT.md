@@ -1474,6 +1474,12 @@ None.
 
 ---
 
+## SESSION 18 — 2026-09-06 — Rotation layer implementation — open
+
+Branch: sim/rotation-layer
+
+---
+
 ## NEXT SESSION START POINT
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
