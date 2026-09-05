@@ -363,6 +363,34 @@ positions for anything on the ground. Thresholds in absolute units anywhere in t
 
 ---
 
+### 19. Terrain is procedural noise, not a spectral sum, and its shape is chosen
+
+**Decision:** `h(s)` is periodic multi-octave gradient noise — a seeded integer hash on a lattice
+whose index is taken modulo each octave's cell count — plus an optional sampled residual for
+post-generation modification (DECISION-017).
+
+**Why the noise and not a Fourier sum:** spectral synthesis was recommended three times before it
+was costed, and it does not work here. Resolving wavelength `λ` on a surface `C` around needs `C/λ`
+coefficients at `O(k)` per sample. Metre detail on 38,400 km is **38 million coefficients**; fBm
+needs **26 octaves** at `O(octaves)`. The property the whole decision rested on — regenerate detail
+at any zoom — would have been lost at the first serious zoom. The lattice modulo keeps periodicity
+exact by construction, which was spectral synthesis's other attraction, so nothing is given up.
+
+**Why a residual as well:** craters and eroded channels cannot be expressed by changing a noise
+parameter. A sampled array is the only representation of "this is here now", and it costs nothing
+while empty.
+
+**Rules out:** A global Fourier terrain. A 2D heightmap — the surface is a closed curve, so `h` takes
+one coordinate and an API taking two misunderstands the world. Any claim that terrain has unlimited
+detail: the floor is `C / 2**octaves`, it is finite, and the layer reports it rather than inventing
+flatness below it.
+
+**And the part most easily forgotten:** terrain statistics are **abstracted, not derived**. Nothing
+in the axioms predicts a roughness exponent. Roughness and amplitude are world constants, recorded
+in the §4 ledger, so no result about mountains or slopes is a finding about two-dimensional physics.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
@@ -386,7 +414,8 @@ positions for anything on the ground. Thresholds in absolute units anywhere in t
 - Nothing. The orbit layer is complete; the next layer has no PRP yet.
 
 ### Not Started
-- planet, surface, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
+- The surface layer. `PRPs/surface-layer.md` is written and awaits approval.
+- planet, water, air, life. None has a PRP. Debris and the impact cycle were explicitly
   deferred out of the orbit layer and need one.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate
   deciding which grid points count as habitable is DECISION-012 and still open.

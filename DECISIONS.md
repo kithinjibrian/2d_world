@@ -12,37 +12,6 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
-### DECISION-017 — Is terrain a raster, or a field evaluable at any resolution?
-
-**Status:** open
-**Raised:** 2026-09-05 — Session 10
-**Resolved by:** human
-**Blocks:** The surface layer, which has no PRP yet. Does not block the viewer skeleton, but the
-viewer is what makes the question urgent — it will be asking for terrain at eleven different scales.
-
-**Question:** When the surface layer is built, is `h(x)` stored as a sampled array, or represented so
-it can be evaluated at arbitrary position and arbitrary resolution?
-
-**Options:**
-- A) **An evaluable field — spectral synthesis.** `h(x)` as a sum of sinusoids at integer wavenumbers.
-  Periodicity on the closed surface is then exact by construction rather than stitched, and the
-  viewer can regenerate detail at whatever zoom it is at, from a few thousand coefficients, exactly
-  consistent with the simulation. Zoom becomes free and needs no LOD pyramid and no streaming.
-- B) **A sampled raster.** Simpler to reason about and to modify in place (erosion, deposition, an
-  impact crater). But it fixes a resolution forever: below the sample spacing there is nothing to
-  show, and above it the viewer needs a mipmap pyramid. Periodicity has to be enforced rather than
-  guaranteed.
-- C) **Both** — a spectral base field plus a sampled residual for anything that modifies the ground
-  after generation.
-
-**Notes:** Recommend C if the surface is ever eroded or cratered, A otherwise. The distinction is not
-cosmetic: a raster forfeits arbitrary zoom permanently, and the viewer is the reason to decide before
-the surface layer is written rather than after. Note that a desktop viewer shares the simulation's
-process (DECISION-016), so there is no serialisation boundary — an evaluable field costs nothing to
-"ship", it is simply called.
-
----
-
 ### DECISION-012 — What counts as habitable?
 
 **Status:** open
@@ -224,6 +193,57 @@ to derive the star from, because by then there will be a map showing which lumin
   evolution. It never returns a plausible default. A stub that answers everything is never revisited.
 - Any result depending on it is reported as a consequence of a chosen parameter, not a finding about
   two-dimensional physics.
+
+**Copied to MEMORY.md:** yes
+
+---
+
+### DECISION-017 — Is terrain a raster, or a field evaluable at any resolution?
+
+**Status:** resolved
+**Raised:** 2026-09-05 — Session 10
+**Resolved:** 2026-09-05 — Session 12
+
+**Question:** Is `h(s)` a sampled array, or represented so it can be evaluated at arbitrary position
+and arbitrary resolution?
+
+**Outcome:** **Both** (option C) — an **evaluable procedural base field plus a sampled residual**.
+The base is queried at whatever resolution the caller needs; the residual is a sampled array added
+on top, for anything that modifies the ground after generation.
+
+**But not by spectral synthesis, which was the recommendation and does not work at this scale.**
+A Fourier sum over integer wavenumbers gives exact periodicity for free, which is why it was
+proposed — but resolving detail of wavelength `λ` on a surface `C` around needs `C/λ` coefficients,
+and it costs `O(k)` per sample. Measured while writing the PRP:
+
+| target detail | Fourier coefficients | fBm octaves |
+|---|---|---|
+| 10 km | 3,840 | 12 |
+| 100 m | 384,000 | 19 |
+| **1 m** | **38,400,000** | **26** |
+
+Metre detail on a 38,400 km surface needs 38 million coefficients. It is not tractable, and the
+"regenerate detail at any zoom" property the whole decision rests on would have been lost at the
+first serious zoom.
+
+The base field is therefore **periodic multi-octave gradient noise (fBm)**: a seeded integer hash on
+a lattice whose index is taken modulo the octave's cell count, so periodicity is still exact by
+construction, while cost is `O(octaves)` — about 26 hash evaluations for metre detail, independent
+of position. It keeps every property that motivated option A and drops the one that made it
+impossible.
+
+**Rationale for the residual half:** the impact cycle is, in the monograph's phrase, the metronome
+of Vellum's biology, and erosion follows water. Both modify the ground after it is generated, and
+neither can be expressed by changing a noise coefficient. A sampled residual is the only way to
+represent "this crater is here now", and it costs nothing while it is empty.
+
+**Consequences:**
+- Terrain has a **resolution floor**: `C / 2^octaves`. It is finite, must be reported, and the layer
+  must say what it is rather than silently returning smooth ground below it.
+- **Terrain statistics are abstracted, not derived.** Nothing in `docs/AXIOMS.md` predicts a
+  roughness exponent — that would need tectonics and erosion, which are not modelled. Roughness and
+  amplitude are world constants, and a new entry goes in the §4 ledger. Any result depending on the
+  shape of the ground is a consequence of a choice.
 
 **Copied to MEMORY.md:** yes
 

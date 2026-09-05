@@ -999,9 +999,77 @@ None. DECISION-017 was already open and is now the gate on the surface layer.
 
 ---
 
-## SESSION 12 — 2026-09-05 — Surface layer PRP — open
+## SESSION 12 — 2026-09-05 — Surface layer PRP — closed
 
 Branch: sim/surface-layer
+
+### WHAT WAS DONE
+
+Resolved DECISION-017 and wrote `PRPs/surface-layer.md`. No code — it awaits approval.
+
+**The recommendation I had made three times was wrong, and costing it took two minutes.** Spectral
+synthesis was proposed in Sessions 3, 10 and 11 as the way to make terrain evaluable at any
+resolution: a sum of sinusoids at integer wavenumbers, periodic on the closed surface by
+construction. The attraction was real, but nobody had asked what it costs. Resolving wavelength `λ`
+on a surface `C` around needs `C/λ` coefficients, at `O(k)` per sample:
+
+    target detail    Fourier coefficients    fBm octaves
+    10 km                           3,840             12
+    100 m                         384,000             19
+    1 m                        38,400,000             26
+
+Metre detail on a 38,400 km surface needs 38 million coefficients. The whole reason for choosing an
+evaluable field over a raster — regenerate detail at whatever zoom you are at — would have been lost
+at the first serious zoom, and the layer would have had to grow a mipmap pyramid after all.
+
+The fix keeps every property and drops the cost: **periodic multi-octave gradient noise**. Each
+octave hashes a lattice index taken **modulo that octave's cell count**, so periodicity is still
+exact by construction, and cost is `O(octaves)` — 26 hash evaluations for metre detail, independent
+of position or scale.
+
+Two consequences that the PRP makes explicit rather than leaving implicit:
+
+- **Terrain has a finite resolution floor**, `C / 2**octaves`. "Infinite zoom" was always an
+  overstatement. The layer must report the floor and must refuse to invent flatness below it — a
+  viewer that zooms past the ground's detail should say so, not show smooth invention.
+- **Terrain statistics are abstracted, not derived.** Nothing in the axioms predicts a roughness
+  exponent; that would need tectonics and erosion. Roughness and amplitude are world constants and
+  now have an entry in the `docs/AXIOMS.md` §4 ledger, so no result about mountains or slopes can be
+  reported as a finding about two-dimensional physics.
+
+Scope is terrain only. Basins, water, drainage and the anoxic depth are the next layer and are
+substantial on their own; erosion and craters are what the residual exists for, in a later PRP.
+
+### FILES CREATED OR MODIFIED
+
+    PRPs/surface-layer.md   — NEW. Awaits approval
+    DECISIONS.md            — 017 resolved, with the cost table
+    docs/AXIOMS.md          — §4 ledger gains terrain statistics
+    MEMORY.md               — decision 19
+    CONTEXT.md              — this entry
+
+### TESTS WRITTEN
+
+None — not approved. The test list is the substance of the PRP. Two of its tests are the ones worth
+noting: exact periodicity, which the lattice modulo exists to guarantee and which must be shown to
+fail when the modulo is removed; and a **power-spectrum slope** check, which is what distinguishes
+fractal terrain from a field that is merely random.
+
+### DECISIONS MADE
+
+- DECISION-017 resolved: procedural base plus sampled residual, explicitly not spectral.
+- Two new free parameters — roughness and amplitude — declared as world constants and sent for
+  approval with the PRP rather than smuggled in as implementation detail.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- `PRPs/surface-layer.md` awaits approval. Branch `sim/surface-layer` unmerged, unpushed.
+- DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (grey vs spectral transfer).
+- The planet layer and the debris/impact layer still have no PRPs.
 
 ---
 
@@ -1009,22 +1077,19 @@ Branch: sim/surface-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
+`PRPs/surface-layer.md`.
 
-The viewer is complete and green on branch `sim/viewer`, unmerged. Merge it to `main` first.
+**If the surface PRP is approved, implement it test-first** on branch `sim/surface-layer`. Two
+acceptance criteria are the ones that will be tempting to skip and are the point: remove the lattice
+modulo and confirm the periodicity test goes red, and make the octave amplitudes uniform and confirm
+the power-spectrum test goes red. The second is what separates fractal terrain from noise.
 
-**The next PRP is the surface layer.** It is what the viewer was built to show, and
-**DECISION-017 must be answered before it is written** — a sampled raster fixes a resolution
-forever, while a spectral field lets the viewer regenerate `h(x)` at any of the eleven scales it
-spans. Recommendation: a spectral base field, plus a sampled residual only if the ground is ever
-eroded or cratered.
+Approval also covers two new free parameters — roughness and amplitude — which are world constants,
+not derived quantities.
 
-Adding a layer to the view is one class: a `bands` attribute and a `draw(camera, target)`, using
-`camera.surface_to_screen` for anything on the ground and `visible_surface_indices` to cull.
-
-Carry the Session 11 lesson forward: **mutate and re-run before believing a justification, and
-check that the test fails for the reason you think.** The anchored-transform test passed under its
-own mutation because it was displacing along an axis where the anchor was zero.
+After the surface, water is the natural next layer: basins as local minima, filling, the unbranched
+runs that follow from having no third direction, and the anoxic depth.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

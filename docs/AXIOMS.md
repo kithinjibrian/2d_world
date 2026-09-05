@@ -271,6 +271,7 @@ it is asked for something it cannot honestly supply, rather than returning a pla
 | Constitutive relations (T2.1, T2.3, T2.4) | Effective theories require them by construction | Viscosity, specific heats, stiffness are chosen | Only if a value turns out to matter qualitatively |
 | Non-relativistic regime (T0.3) | Assumed, not checked | Invalid if any derived speed approaches a signal speed | Once orbital speeds are known |
 | Kell's luminosity (T2.2) | DECISION-010 — stubbed to reach the surface layers sooner | Stellar output is a swept parameter, so no climate result is a finding about stellar physics | Once the scan shows which luminosities matter — the map makes the derivation better targeted |
+| Terrain statistics (T2.4) | Nothing here predicts a roughness exponent; deriving one needs tectonics and erosion, which are not modelled | The shape of the ground is chosen, so no result about mountains, basins or slopes is a finding about 2D physics | If tectonics or erosion are ever modelled, at which point roughness becomes an output |
 
 ---
 
