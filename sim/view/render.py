@@ -55,7 +55,13 @@ def _point(value: tuple[object, object]) -> tuple[int, int]:
 
 
 class StarDisc:
-    """Kell, drawn at least a pixel across however far out you are."""
+    """Kell, drawn at least a pixel across however far out you are.
+
+    Culled when it does not intersect the viewport. Without that, zooming to
+    the ground drew a circle of radius 2e7 pixels centred a world unit away and
+    filled the screen with gold -- the star is only 0.02 world units across,
+    but at 1e9 pixels per unit that is still twenty million pixels.
+    """
 
     bands: Final = frozenset(ScaleBand)
 
@@ -65,9 +71,24 @@ class StarDisc:
 
     def draw(self, camera: Camera, target: object) -> None:
         surface = cast(pygame.Surface, target)
-        centre = _point(camera.world_to_screen(0.0, 0.0))
-        radius = max(2, int(self._radius * camera.scale))
-        pygame.draw.circle(surface, _GOLD, centre, radius)
+        cx = float(cast(float, camera.world_to_screen(0.0, 0.0)[0]))
+        cy = float(cast(float, camera.world_to_screen(0.0, 0.0)[1]))
+        radius = self._radius * camera.scale
+
+        # Nothing to draw if the disc misses the viewport entirely...
+        nearest_x = min(max(cx, 0.0), float(camera.width))
+        nearest_y = min(max(cy, 0.0), float(camera.height))
+        if math.hypot(cx - nearest_x, cy - nearest_y) > radius:
+            return
+        # ...and nothing sensible to draw if we are inside it. Being inside the
+        # star is not a view; it means the camera is somewhere it should not be,
+        # and painting the viewport gold hides that rather than showing it.
+        corners = [(0.0, 0.0), (camera.width, 0.0), (0.0, camera.height),
+                   (camera.width, camera.height)]
+        if all(math.hypot(cx - x, cy - y) < radius for x, y in corners):
+            return
+
+        pygame.draw.circle(surface, _GOLD, (int(cx), int(cy)), max(2, int(radius)))
 
 
 class OrbitTrace:
@@ -94,12 +115,12 @@ class OrbitTrace:
 class PlanetDisc:
     """Vellum. A bare disc until the surface layer exists.
 
-    The surface curve is drawn as a polyline sampled in surface coordinates and
-    composed hierarchically, so it stays exact at ground zoom -- the same path a
-    terrain layer will take.
+    Drawn only where the whole disc is meaningful. Closer in, TerrainTrace
+    draws the real profile and this would just be a duplicate circle through
+    the middle of it.
     """
 
-    bands: Final = frozenset(ScaleBand)
+    bands: Final = frozenset({ScaleBand.SYSTEM, ScaleBand.PLANETARY})
 
     def __init__(self, planet: Disc, samples: int = 512) -> None:
         self._planet = planet

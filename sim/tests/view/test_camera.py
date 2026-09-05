@@ -71,13 +71,33 @@ class TestZoom:
             assert after == pytest.approx(before, rel=1e-9)
 
     def test_scale_is_clamped_and_says_so(self) -> None:
-        assert cam(Camera.MAX_SCALE).zoomed(10.0).is_clamped
-        assert cam(Camera.MIN_SCALE).zoomed(0.1).is_clamped
-        assert not cam(1.0).zoomed(2.0).is_clamped
+        c = cam(1.0)
+        assert c.zoomed(1e30).is_clamped
+        assert c.zoomed(1e-30).is_clamped
+        assert not c.zoomed(2.0).is_clamped
 
     def test_clamping_never_reaches_zero_or_infinity(self) -> None:
-        assert cam(Camera.MIN_SCALE).zoomed(1e-30).scale > 0.0
-        assert math.isfinite(cam(Camera.MAX_SCALE).zoomed(1e30).scale)
+        c = cam(1.0)
+        assert c.zoomed(1e-300).scale > 0.0
+        assert math.isfinite(c.zoomed(1e300).scale)
+
+    def test_zoom_limits_scale_with_the_world(self) -> None:
+        """The defect: absolute limits made GROUND unreachable.
+
+        A limit expressed in pixels per world unit means nothing when the world
+        is measured in natural units. Two worlds differing by a factor of a
+        million must permit the same *fraction* of themselves to be seen.
+        """
+        small = Camera(0.0, 0.0, 1.0, 800, 600, reference_length=1.0)
+        large = Camera(0.0, 0.0, 1.0, 800, 600, reference_length=1e6)
+        assert large.max_scale == pytest.approx(small.max_scale * 1e-6)
+        deepest_small = small.zoomed(1e30)
+        deepest_large = large.zoomed(1e30)
+        assert deepest_small.span_ratio == pytest.approx(deepest_large.span_ratio)
+
+    def test_the_deepest_zoom_reaches_the_ground_band(self) -> None:
+        c = Camera(0.0, 0.0, 1.0, 800, 600, reference_length=3.84e-5)
+        assert c.zoomed(1e30).band is ScaleBand.GROUND
 
     @pytest.mark.parametrize("bad", [0.0, -1.0, float("nan"), float("inf")])
     def test_bad_scale_raises(self, bad: float) -> None:

@@ -68,10 +68,17 @@ class Camera:
     #: length -- see sim.view.bands.
     reference_length: float = 1.0
 
-    #: Zoom limits. Clamped rather than allowed to reach zero or infinity, and
-    #: the clamp is reported by `is_clamped` rather than applied silently.
-    MIN_SCALE: Final[float] = 1e-14
-    MAX_SCALE: Final[float] = 1e9
+    #: Zoom limits, expressed as the fraction of the world the viewport spans
+    #: -- *not* as an absolute pixels-per-world-unit constant.
+    #:
+    #: Absolute limits were the first attempt and made the GROUND band
+    #: unreachable: the simulation works in natural units where the orbital
+    #: radius is about 1, so a cap of 1e9 px per world unit stopped the zoom
+    #: at REGIONAL on a world 3.8e-5 units around. The same mistake the scale
+    #: bands made, in a second place. A zoom limit is "how much of the world
+    #: can I see", which is a ratio.
+    MIN_SPAN_RATIO: Final[float] = 1e-10
+    MAX_SPAN_RATIO: Final[float] = 1e7
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.scale) or self.scale <= 0.0:
@@ -173,7 +180,7 @@ class Camera:
         """Return a camera scaled by `factor`, clamped to the zoom limits."""
         if not math.isfinite(factor) or factor <= 0.0:
             raise ValueError(f"zoom factor must be positive and finite, got {factor!r}")
-        target = min(max(self.scale * factor, self.MIN_SCALE), self.MAX_SCALE)
+        target = min(max(self.scale * factor, self.min_scale), self.max_scale)
         return Camera(
             self.focus_x, self.focus_y, target, self.width, self.height, self.reference_length
         )
@@ -203,12 +210,39 @@ class Camera:
         """Return a camera centred elsewhere, at the same zoom."""
         return Camera(x, y, self.scale, self.width, self.height, self.reference_length)
 
+    def focused_on_surface(
+        self, planet: Disc, surface: float, height: float = 0.0
+    ) -> Camera:
+        """Return a camera centred on a point of a planet's surface.
+
+        Centring on the planet's *centre* is right only while the whole planet
+        fits in the viewport. Past that it puts the camera inside the world with
+        the ground thousands of pixels away, which is what "zoom in and see
+        nothing" looked like before this existed.
+        """
+        theta = 2.0 * math.pi * (surface % planet.circumference) / planet.circumference
+        distance = planet.radius + height
+        return self.focused_on(
+            planet.centre_x + distance * math.cos(theta),
+            planet.centre_y + distance * math.sin(theta),
+        )
+
     # --- reporting -------------------------------------------------------
 
     @property
     def metres_per_pixel(self) -> float:
         """World units covered by one pixel."""
         return 1.0 / self.scale
+
+    @property
+    def min_scale(self) -> float:
+        """Widest zoom out: the viewport spans MAX_SPAN_RATIO worlds."""
+        return self.width / (self.MAX_SPAN_RATIO * self.reference_length)
+
+    @property
+    def max_scale(self) -> float:
+        """Deepest zoom in: the viewport spans MIN_SPAN_RATIO of the world."""
+        return self.width / (self.MIN_SPAN_RATIO * self.reference_length)
 
     @property
     def span(self) -> float:
@@ -228,4 +262,4 @@ class Camera:
     @property
     def is_clamped(self) -> bool:
         """True when the zoom has hit a limit, so callers can say so."""
-        return self.scale in (self.MIN_SCALE, self.MAX_SCALE)
+        return self.scale <= self.min_scale or self.scale >= self.max_scale

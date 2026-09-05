@@ -34,6 +34,14 @@ Never deleted. Older entries are never modified.
 - An abstraction ledger recording everything the project posits rather than derives, so a result
   that reflects a choice can never be mistaken for a finding about two-dimensional physics.
 
+### Fixed
+- The viewer could not actually reach the ground: its zoom limits were absolute, so the closest
+  zoom stopped short of the ground band entirely.
+- Zooming in filled the window with gold — the star was drawn without checking whether it was on
+  screen, and at close zoom its radius was twenty million pixels.
+- Following Vellum put the camera inside the planet rather than on its surface, so zooming in
+  showed empty space where the world should have been.
+
 ### Changed
 - Gravity is postulated as a direct attractive force rather than spacetime curvature, because
   general relativity in 2+1 dimensions has no propagating degrees of freedom and produces no

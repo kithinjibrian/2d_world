@@ -164,6 +164,14 @@ determinism, and they are the only tests allowed to assert a specific number —
 whatever the sim produced, recorded as a golden value, and a change to it is a change to be
 explained, not a failure to be silenced.
 
+**A feature whose output is visual is not validated by asserting that pixels changed.**
+A smoke test that draws each layer once at a few scales and checks the surface is non-empty passes
+happily while the view is a flat wash of one colour, while a whole band of the zoom range is
+unreachable, and while the camera sits inside the planet. All three shipped that way. When a PRP's
+validation step says to look at the thing, **look at it** — and where looking is not possible,
+write the traversal instead: walk the whole range the feature exists to provide and assert the
+output stays sane at every step, not that it is non-blank at four of them.
+
 **Never write a test that asserts a number from the monograph.** Outcomes are results to be read.
 Invariants are what gets tested. A test that encodes a guessed number is worse than no test — it
 locks the simulation to a hypothesis and disguises the lock as verification.

@@ -409,6 +409,33 @@ rough.
 
 ---
 
+### 21. Limits and thresholds in the viewer are ratios, and this was learned twice
+
+**Decision:** Zoom limits, like scale bands, are expressed as the fraction of the world the viewport
+spans — `MIN_SPAN_RATIO` and `MAX_SPAN_RATIO` — never as absolute pixels per world unit.
+
+**Why:** Decision 18 already established that scale *bands* in absolute units are meaningless when
+the simulation works in natural units. The zoom *limits* were left absolute in the same file, and
+capped at 1e9 px per world unit they made the GROUND band unreachable on a world 3.8e-5 units
+around. The same error, in a second place, surviving the fix to the first.
+
+Two other defects shipped alongside it, both invisible to the tests that existed. The star was drawn
+with an unculled radius — 0.02 world units is twenty million pixels at close zoom — and filled the
+viewport with gold. And following Vellum centred on the planet's *centre*, which is correct only
+while the planet fits in the viewport; past that it puts the camera inside the world with the ground
+thousands of pixels off-screen.
+
+**Rules out:** Any absolute threshold in the viewer. Drawing a primitive without culling it against
+the viewport. Centring on a body's centre at a zoom where the body does not fit.
+
+**And the process lesson, now a rule in CLAUDE.md:** a visual feature is not validated by asserting
+that pixels changed. The viewer PRP said to run the app and zoom by hand; headless smoke tests were
+run instead, and all three defects were found in seconds by someone actually looking. Where looking
+is not possible, walk the whole range and assert sanity at every step — `test_zoom_journey.py`
+exists for exactly that and catches all three.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working

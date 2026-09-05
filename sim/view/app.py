@@ -8,7 +8,7 @@ checked by reading.
 Controls
 --------
     scroll / + -    zoom about the cursor
-    arrow keys      pan
+    arrow keys      pan; left/right walks along the ground when zoomed in
     [ ]             step along Vellum's orbit
     f               follow Vellum (default) or hold position
     home            reframe the whole system
@@ -72,7 +72,10 @@ def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
         # WORLD CONSTANT: P(k) ~ k^-2, the fractional-Brownian default.
         roughness=2.0,
         seed=20260905,
-        octaves=22,
+        # Enough octaves that terrain still has detail throughout the GROUND
+        # band. At 22 the resolution floor sat above the whole band, so the
+        # closest zoom showed invented smoothness.
+        octaves=34,
     )
     return star, trajectory, planet, terrain
 
@@ -98,6 +101,8 @@ def run(width: int = 1280, height: int = 800) -> None:
     step = 0
     following = True
     running = True
+    #: Where on the closed surface the camera sits once zoomed past the planet.
+    anchor = 0.0
 
     while running:
         for event in pygame.event.get():
@@ -107,8 +112,8 @@ def run(width: int = 1280, height: int = 800) -> None:
                 mx, my = pygame.mouse.get_pos()
                 camera = camera.zoomed_about(_ZOOM_STEP**event.y, float(mx), float(my))
             elif event.type == pygame.KEYDOWN:
-                camera, step, following, running = _on_key(
-                    event.key, camera, step, following, running, trajectory, planet, width
+                camera, step, following, running, anchor = _on_key(
+                    event.key, camera, step, following, running, planet, width, anchor
                 )
 
         # The planet moves along its orbit; the viewer only reads the state.
@@ -119,15 +124,31 @@ def run(width: int = 1280, height: int = 800) -> None:
             circumference=planet.circumference,
         )
         scene = _rebuild(star, trajectory, planet, terrain)
-        if following:
-            camera = camera.focused_on(planet.centre_x, planet.centre_y)
+        looking = _camera_for(camera, planet, following, anchor)
 
         surface.fill(_BACKGROUND)
-        scene.draw(camera, surface)
+        scene.draw(looking, surface)
         pygame.display.flip()
         clock.tick(60)
 
     pygame.quit()
+
+
+def _camera_for(
+    camera: Camera, planet: Disc, following: bool, anchor: float
+) -> Camera:
+    """Return where the camera should actually be looking this frame.
+
+    While the whole planet fits in the viewport, centring on its centre is
+    right. Once it does not, centring on the centre puts the camera *inside*
+    the world with the ground far off-screen, so the focus moves to a point on
+    the surface instead. Pure, so the transition is testable without a display.
+    """
+    if not following:
+        return camera
+    if camera.span > planet.circumference:
+        return camera.focused_on(planet.centre_x, planet.centre_y)
+    return camera.focused_on_surface(planet, anchor)
 
 
 def _rebuild(
@@ -148,39 +169,43 @@ def _on_key(
     step: int,
     following: bool,
     running: bool,
-    trajectory: Trajectory,
     planet: Disc,
     width: int,
-) -> tuple[Camera, int, bool, bool]:
+    anchor: float,
+) -> tuple[Camera, int, bool, bool, float]:
+    """Handle one key press. Returns the new state."""
     pan = camera.width * _PAN_FRACTION * camera.metres_per_pixel
     if key in (pygame.K_ESCAPE, pygame.K_q):
-        return camera, step, following, False
+        return camera, step, following, False, anchor
     if key in (pygame.K_PLUS, pygame.K_EQUALS):
-        return camera.zoomed(_ZOOM_STEP), step, following, running
+        return camera.zoomed(_ZOOM_STEP), step, following, running, anchor
     if key == pygame.K_MINUS:
-        return camera.zoomed(1.0 / _ZOOM_STEP), step, following, running
-    if key == pygame.K_LEFT:
-        return camera.panned(-pan, 0.0), step, False, running
-    if key == pygame.K_RIGHT:
-        return camera.panned(pan, 0.0), step, False, running
+        return camera.zoomed(1.0 / _ZOOM_STEP), step, following, running, anchor
+    if key in (pygame.K_LEFT, pygame.K_RIGHT):
+        direction = -1.0 if key == pygame.K_LEFT else 1.0
+        if following and camera.span <= planet.circumference:
+            # Walking along the ground. Wraps, because the surface has no edge.
+            return camera, step, following, running, anchor + direction * pan
+        return camera.panned(direction * pan, 0.0), step, False, running, anchor
     if key == pygame.K_UP:
-        return camera.panned(0.0, pan), step, False, running
+        return camera.panned(0.0, pan), step, False, running, anchor
     if key == pygame.K_DOWN:
-        return camera.panned(0.0, -pan), step, False, running
+        return camera.panned(0.0, -pan), step, False, running, anchor
     if key == pygame.K_LEFTBRACKET:
-        return camera, step - 200, following, running
+        return camera, step - 200, following, running, anchor
     if key == pygame.K_RIGHTBRACKET:
-        return camera, step + 200, following, running
+        return camera, step + 200, following, running, anchor
     if key == pygame.K_f:
-        return camera, step, not following, running
+        return camera, step, not following, running, anchor
     if key == pygame.K_HOME:
         return (
             Camera(0.0, 0.0, width / 6.0, camera.width, camera.height, camera.reference_length),
             step,
             False,
             running,
+            anchor,
         )
-    return camera, step, following, running
+    return camera, step, following, running, anchor
 
 
 def main() -> None:

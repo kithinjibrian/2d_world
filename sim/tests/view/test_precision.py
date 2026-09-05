@@ -141,3 +141,34 @@ class TestHierarchicalPrecision:
         ground = c.surface_to_screen(self.PLANET, surface=0.0, height=0.0)
         up = c.surface_to_screen(self.PLANET, surface=0.0, height=1e5)
         assert float(up[0]) > float(ground[0])
+
+
+class TestFocusingOnTheSurface:
+    """Centring on the planet's centre is only right while the planet fits.
+
+    Past that it puts the camera inside the world, with the ground thousands
+    of pixels off-screen -- which looked like "zoom in and the world vanishes".
+    """
+
+    PLANET = Disc(centre_x=1.0, centre_y=0.0, circumference=3.84e-5)
+
+    def test_the_focused_point_lands_at_the_viewport_centre(self) -> None:
+        c = Camera(0.0, 0.0, 1e9, 800, 600, reference_length=self.PLANET.circumference)
+        for surface in (0.0, 1e-6, self.PLANET.circumference * 0.37):
+            focused = c.focused_on_surface(self.PLANET, surface)
+            sx, sy = focused.surface_to_screen(self.PLANET, surface, 0.0)
+            assert float(sx) == pytest.approx(400.0, abs=1e-3)
+            assert float(sy) == pytest.approx(300.0, abs=1e-3)
+
+    def test_focusing_wraps_with_the_surface(self) -> None:
+        c = Camera(0.0, 0.0, 1e9, 800, 600, reference_length=self.PLANET.circumference)
+        here = c.focused_on_surface(self.PLANET, 1e-6)
+        around = c.focused_on_surface(self.PLANET, 1e-6 + self.PLANET.circumference)
+        assert here.focus_x == pytest.approx(around.focus_x)
+        assert here.focus_y == pytest.approx(around.focus_y)
+
+    def test_height_lifts_the_focus_off_the_ground(self) -> None:
+        c = Camera(0.0, 0.0, 1e9, 800, 600, reference_length=self.PLANET.circumference)
+        ground = c.focused_on_surface(self.PLANET, 0.0, 0.0)
+        aloft = c.focused_on_surface(self.PLANET, 0.0, 1e-6)
+        assert aloft.focus_x > ground.focus_x
