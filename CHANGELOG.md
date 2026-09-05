@@ -34,6 +34,12 @@ Never deleted. Older entries are never modified.
 - An abstraction ledger recording everything the project posits rather than derives, so a result
   that reflects a choice can never be mistaken for a finding about two-dimensional physics.
 
+### Changed
+- The viewer opens at most of the desktop rather than a fixed 1280x800, and the window can be
+  resized — resizing shows more or less of the world rather than magnifying what was there.
+- The view can be dragged with the mouse. On the ground, dragging walks along the surface and
+  changes height instead of flying off the planet.
+
 ### Fixed
 - The viewer could not actually reach the ground: its zoom limits were absolute, so the closest
   zoom stopped short of the ground band entirely.

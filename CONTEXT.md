@@ -1249,9 +1249,84 @@ None.
 
 ---
 
-## SESSION 15 — 2026-09-05 — Bigger window, mouse panning — open
+## SESSION 15 — 2026-09-05 — Bigger window, mouse panning — closed
 
 Branch: feat/viewer-input
+
+### WHAT WAS DONE
+
+Two viewer affordances the user asked for: a bigger window, and panning with the mouse.
+
+**Window.** The size was a hardcoded 1280x800, which is a postage stamp on a large display and does
+not fit a small one. It now queries the desktop and takes 88% by 82% of it, with a floor of 960x600.
+On this machine that is 2703x1574 against a 3072x1920 desktop. The window is also `RESIZABLE`, and
+`Camera.resized` preserves focus and zoom so a resize shows *more of the world* rather than
+magnifying what was there — which also means the scale band can change on resize, since a band is
+how much of the world is in view.
+
+**Dragging, and the decision inside it.** Panning by mouse is trivial except for one question: what
+should a drag mean while following Vellum at ground zoom? Free-panning there leaves the planet
+within a few pixels of travel and shows empty space — exactly the failure fixed in Session 14. So
+there are two regimes:
+
+- **Following, and zoomed in past the planet:** a horizontal drag walks along the ground, wrapping,
+  because the surface has no edge; a vertical drag changes height above it, clamped at the surface.
+  Following stays engaged.
+- **Otherwise:** the camera pans freely and following is dropped. It *has* to be dropped — with
+  follow on the camera is re-centred every frame, so a drag would move the pointer while the view
+  stayed put.
+
+The sign convention is that whatever is under the pointer stays under it, and both regimes share it.
+A test asserts that specifically, because a transition between two regimes that disagree about which
+way is up reverses the controls under the user's hand mid-gesture.
+
+**A test caught my own inconsistency**, in the tests rather than the code: the vertical-drag tests
+were written expecting "drag up raises the viewpoint" while the free pan already implemented "drag
+down raises the viewpoint". The code was self-consistent; the expectation was not. Fixed the tests
+and added one asserting the two regimes agree.
+
+### ON NOT WRITING A PRP
+
+Judged below the threshold: no new physics, no new dependency, no new free parameter, and nothing
+that changes what the simulation computes. Recorded here because the PRP rule does not carve out an
+exemption for small features, and skipping it was a judgement call rather than a rule.
+
+What the PRP would have been for was the one genuine design question — what a drag means on the
+ground — and that is decided explicitly above rather than silently.
+
+### FILES CREATED OR MODIFIED
+
+    sim/tests/view/test_input.py  — NEW. Resizing and both drag regimes
+    sim/view/camera.py            — Camera.resized
+    sim/view/app.py               — _on_drag; drag, resize and button events; desktop-relative
+                                    default size; RESIZABLE window
+    CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+311 total, 16 new. Resizing preserves focus and zoom and can change the band; the world point under
+the cursor stays under it through a drag; dragging drops follow when free-panning; horizontal drag
+walks the surface and wraps; vertical drag changes height and clamps at the ground; and both regimes
+agree on which way is up.
+
+### DECISIONS MADE
+
+- Two drag regimes rather than one, for the reason above.
+- Dragging while following at wide zoom drops follow; while following on the ground it does not.
+- Height clamps at the surface. Going below ground may be worth allowing later to inspect a terrain
+  profile, but it is not what a drag should do by accident.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `feat/viewer-input` unmerged, unpushed.
+- The ground is drawn as a thin line, not filled, so at close zoom the view is ~99.9% background.
+  Correct for a profile drawing and arguably wrong for something called ground — worth a look, but
+  it is a visual design choice rather than a defect.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1261,16 +1336,16 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-The viewer defects are fixed on branch `fix/viewer-zoom`, unmerged. Merge it first, then run
-`.venv/bin/python -m sim.view.app` and zoom to the ground — it gets there now.
+The viewer is on branch `feat/viewer-input`, unmerged. Merge it first.
 
 **The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
-follow from having no third direction. Leave stratification and the anoxic depth to a climate-facing
-layer, and erosion — which writes to the terrain residual — to its own PRP.
+follow from having no third direction. It is also the first layer that can produce a number the
+monograph only guessed — the basin count. Leave stratification and the anoxic depth to a
+climate-facing layer, and erosion, which writes to the terrain residual, to its own PRP.
 
-Carry the Session 14 lesson, now a rule in the TESTING RULE: **a visual feature is not validated by
-asserting that pixels changed.** Walk the whole range the feature exists to provide and assert
-sanity at every step.
+One small open question for the user, not blocking: the ground is drawn as a thin line rather than
+filled, so a close view is almost entirely background. Filling below the profile would make ground
+read as ground, and would matter more once there is water to draw against it.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

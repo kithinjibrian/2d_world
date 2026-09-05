@@ -7,12 +7,15 @@ checked by reading.
 
 Controls
 --------
+    drag            pan; on the ground, walks along it and changes height
     scroll / + -    zoom about the cursor
     arrow keys      pan; left/right walks along the ground when zoomed in
     [ ]             step along Vellum's orbit
     f               follow Vellum (default) or hold position
     home            reframe the whole system
     esc / q         quit
+
+The window is resizable, and opens at most of the desktop.
 
 Axioms used: none. The viewer computes no physics.
 Abstracts: nothing directly.
@@ -40,6 +43,8 @@ __all__ = ["main", "run"]
 _BACKGROUND = (14, 18, 16)
 _ZOOM_STEP = 1.25
 _PAN_FRACTION = 0.08
+_MIN_WIDTH = 960
+_MIN_HEIGHT = 600
 
 
 def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
@@ -80,11 +85,25 @@ def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain]:
     return star, trajectory, planet, terrain
 
 
-def run(width: int = 1280, height: int = 800) -> None:
+def _default_size() -> tuple[int, int]:
+    """Return a window size filling most of the desktop.
+
+    Queried rather than hardcoded: a fixed 1280x800 is a postage stamp on a
+    large display and does not fit a small one.
+    """
+    info = pygame.display.Info()
+    width = max(_MIN_WIDTH, int(info.current_w * 0.88))
+    height = max(_MIN_HEIGHT, int(info.current_h * 0.82))
+    return width, height
+
+
+def run(width: int | None = None, height: int | None = None) -> None:
     """Open the window and run until the user quits."""
     pygame.init()
     pygame.display.set_caption("Vellum")
-    surface = pygame.display.set_mode((width, height))
+    if width is None or height is None:
+        width, height = _default_size()
+    surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     clock = pygame.time.Clock()
 
     star, trajectory, planet, terrain = _demo_world()
@@ -103,11 +122,28 @@ def run(width: int = 1280, height: int = 800) -> None:
     running = True
     #: Where on the closed surface the camera sits once zoomed past the planet.
     anchor = 0.0
+    #: Height above that point. Dragging vertically on the ground changes it.
+    anchor_height = 0.0
+    dragging = False
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.VIDEORESIZE:
+                surface = pygame.display.set_mode(
+                    (event.w, event.h), pygame.RESIZABLE
+                )
+                camera = camera.resized(event.w, event.h)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2):
+                dragging = True
+            elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2):
+                dragging = False
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                camera, following, anchor, anchor_height = _on_drag(
+                    camera, planet, following, anchor, anchor_height,
+                    float(event.rel[0]), float(event.rel[1]),
+                )
             elif event.type == pygame.MOUSEWHEEL:
                 mx, my = pygame.mouse.get_pos()
                 camera = camera.zoomed_about(_ZOOM_STEP**event.y, float(mx), float(my))
@@ -124,7 +160,7 @@ def run(width: int = 1280, height: int = 800) -> None:
             circumference=planet.circumference,
         )
         scene = _rebuild(star, trajectory, planet, terrain)
-        looking = _camera_for(camera, planet, following, anchor)
+        looking = _camera_for(camera, planet, following, anchor, anchor_height)
 
         surface.fill(_BACKGROUND)
         scene.draw(looking, surface)
@@ -134,8 +170,57 @@ def run(width: int = 1280, height: int = 800) -> None:
     pygame.quit()
 
 
+def _on_drag(
+    camera: Camera,
+    planet: Disc,
+    following: bool,
+    anchor: float,
+    anchor_height: float,
+    rel_x: float,
+    rel_y: float,
+) -> tuple[Camera, bool, float, float]:
+    """Handle one drag step. Returns (camera, following, anchor, height).
+
+    Two regimes, because one behaviour cannot serve both:
+
+    **Following, zoomed in past the planet** — a horizontal drag walks along
+    the ground and a vertical drag changes height above it. Free-panning here
+    would leave the planet within a few pixels of travel and show empty space,
+    which is the same failure as centring on the planet's centre. Walking wraps,
+    because the surface has no edge.
+
+    **Otherwise** — the camera pans and following is dropped. It has to be
+    dropped: with follow on, the camera is re-centred every frame and a drag
+    would move the pointer while the view stayed put.
+
+    The sign convention is that whatever is under the pointer stays under it.
+    """
+    metres = camera.metres_per_pixel
+    on_the_ground = following and camera.span <= planet.circumference
+
+    if on_the_ground:
+        # Screen y grows downward, so dragging down raises the viewpoint.
+        return (
+            camera,
+            True,
+            (anchor - rel_x * metres) % planet.circumference,
+            max(0.0, anchor_height + rel_y * metres),
+        )
+
+    return (
+        camera.panned(-rel_x * metres, rel_y * metres),
+        False,
+        anchor,
+        anchor_height,
+    )
+
+
 def _camera_for(
-    camera: Camera, planet: Disc, following: bool, anchor: float
+    camera: Camera,
+    planet: Disc,
+    following: bool,
+    anchor: float,
+    anchor_height: float = 0.0,
 ) -> Camera:
     """Return where the camera should actually be looking this frame.
 
@@ -148,7 +233,7 @@ def _camera_for(
         return camera
     if camera.span > planet.circumference:
         return camera.focused_on(planet.centre_x, planet.centre_y)
-    return camera.focused_on_surface(planet, anchor)
+    return camera.focused_on_surface(planet, anchor, anchor_height)
 
 
 def _rebuild(

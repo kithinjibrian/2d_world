@@ -206,6 +206,16 @@ class Camera:
             self.reference_length,
         )
 
+    def resized(self, width: int, height: int) -> Camera:
+        """Return the same view in a different-sized window.
+
+        Focus and zoom are preserved, so resizing shows more or less of the
+        world rather than magnifying what was there. The scale band can change
+        as a result, since a band is how much of the world is in view.
+        """
+        return Camera(self.focus_x, self.focus_y, self.scale, width, height,
+                      self.reference_length)
+
     def focused_on(self, x: float, y: float) -> Camera:
         """Return a camera centred elsewhere, at the same zoom."""
         return Camera(x, y, self.scale, self.width, self.height, self.reference_length)
