@@ -436,6 +436,33 @@ exists for exactly that and catches all three.
 
 ---
 
+### 22. On a closed surface the camera must roll, and Vellum does not spin
+
+**Decision:** The camera carries a roll angle, set to local vertical whenever the view is on the
+ground. **Separately: nothing in the simulation rotates.** Vellum has no spin, no day, no night.
+
+**Why the roll:** "up" on a closed surface means radially outward from the planet centre, and that
+direction differs at every position — at the far side of the world it is the exact opposite of what
+it is here. Without roll the ground tilts as you walk along it and is upside down halfway round.
+Verified at eight points around the world: up is up and the ground runs horizontally at every one.
+
+**Why no spin, and what it costs:** planetary rotation was excluded from the orbit layer's scope on
+purpose (`PRPs/orbit-layer.md`, Must NOT Do) to keep that module to two bodies. So Vellum revolves
+around Kell — the orbit is integrated and the rosette is real — but it does not turn on itself. The
+consequence is that **there is no day**: insolation at a point on the surface varies only with
+orbital distance, never with time of day, because no part of the surface ever faces away from Kell.
+
+Rotation is available in two dimensions — angular momentum here is a signed scalar rather than a
+vector, since there is no axis for it to point along — so this is a gap, not an impossibility. It
+needs its own PRP: a rotation rate is a new world constant, the surface coordinate frame turns
+relative to inertial space, and insolation becomes a function of surface position as well as
+orbital phase.
+
+**Rules out:** Drawing anything on the ground without rolling the camera. Treating current
+insolation results as day-resolved — they are orbital only.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working

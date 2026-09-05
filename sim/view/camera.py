@@ -33,7 +33,7 @@ Used by: sim.view.scene, sim.view.render, sim.view.app
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
 import numpy as np
@@ -63,6 +63,11 @@ class Camera:
     scale: float
     width: int
     height: int
+    #: Camera roll, radians counter-clockwise. On a closed surface "up" is
+    #: radially outward, which points a different way at every position, so
+    #: without this the ground appears tilted -- and upside down on the far
+    #: side of the world. See `aligned_to_surface`.
+    rotation: float = 0.0
     #: The planet's circumference, used to decide the scale band. A band is
     #: "how much of the world can I see", which is a ratio rather than a
     #: length -- see sim.view.bands.
@@ -87,6 +92,8 @@ class Camera:
             raise ValueError(f"focus must be finite, got ({self.focus_x!r}, {self.focus_y!r})")
         if self.width <= 0 or self.height <= 0:
             raise ValueError(f"viewport must be positive, got {self.width}x{self.height}")
+        if not math.isfinite(self.rotation):
+            raise ValueError(f"rotation must be finite, got {self.rotation!r}")
         if not math.isfinite(self.reference_length) or self.reference_length <= 0.0:
             raise ValueError(
                 f"reference length must be positive and finite, got {self.reference_length!r}"
@@ -115,6 +122,10 @@ class Camera:
         self, dx: Coordinate, dy: Coordinate
     ) -> tuple[Coordinate, Coordinate]:
         """Map an offset already expressed relative to the focus."""
+        if self.rotation:
+            cos_r = math.cos(self.rotation)
+            sin_r = math.sin(self.rotation)
+            dx, dy = dx * cos_r + dy * sin_r, dy * cos_r - dx * sin_r
         return (
             self.width * 0.5 + dx * self.scale,
             self.height * 0.5 - dy * self.scale,
@@ -169,10 +180,13 @@ class Camera:
 
     def screen_to_world(self, sx: float, sy: float) -> tuple[float, float]:
         """Map pixels back to world coordinates."""
-        return (
-            self.focus_x + (sx - self.width * 0.5) / self.scale,
-            self.focus_y - (sy - self.height * 0.5) / self.scale,
-        )
+        dx = (sx - self.width * 0.5) / self.scale
+        dy = -(sy - self.height * 0.5) / self.scale
+        if self.rotation:
+            cos_r = math.cos(self.rotation)
+            sin_r = math.sin(self.rotation)
+            dx, dy = dx * cos_r - dy * sin_r, dx * sin_r + dy * cos_r
+        return (self.focus_x + dx, self.focus_y + dy)
 
     # --- movement --------------------------------------------------------
 
@@ -181,30 +195,22 @@ class Camera:
         if not math.isfinite(factor) or factor <= 0.0:
             raise ValueError(f"zoom factor must be positive and finite, got {factor!r}")
         target = min(max(self.scale * factor, self.min_scale), self.max_scale)
-        return Camera(
-            self.focus_x, self.focus_y, target, self.width, self.height, self.reference_length
-        )
+        return replace(self, scale=target)
 
     def zoomed_about(self, factor: float, sx: float, sy: float) -> Camera:
         """Zoom while keeping the world point under a screen position fixed."""
         anchor = self.screen_to_world(sx, sy)
         zoomed = self.zoomed(factor)
         moved = zoomed.screen_to_world(sx, sy)
-        return Camera(
-            self.focus_x + (anchor[0] - moved[0]),
-            self.focus_y + (anchor[1] - moved[1]),
-            zoomed.scale,
-            self.width,
-            self.height,
-            self.reference_length,
+        return replace(
+            zoomed,
+            focus_x=self.focus_x + (anchor[0] - moved[0]),
+            focus_y=self.focus_y + (anchor[1] - moved[1]),
         )
 
     def panned(self, dx: float, dy: float) -> Camera:
         """Return a camera moved by a world-space offset."""
-        return Camera(
-            self.focus_x + dx, self.focus_y + dy, self.scale, self.width, self.height,
-            self.reference_length,
-        )
+        return replace(self, focus_x=self.focus_x + dx, focus_y=self.focus_y + dy)
 
     def resized(self, width: int, height: int) -> Camera:
         """Return the same view in a different-sized window.
@@ -213,12 +219,26 @@ class Camera:
         world rather than magnifying what was there. The scale band can change
         as a result, since a band is how much of the world is in view.
         """
-        return Camera(self.focus_x, self.focus_y, self.scale, width, height,
-                      self.reference_length)
+        return replace(self, width=width, height=height)
 
     def focused_on(self, x: float, y: float) -> Camera:
         """Return a camera centred elsewhere, at the same zoom."""
-        return Camera(x, y, self.scale, self.width, self.height, self.reference_length)
+        return replace(self, focus_x=x, focus_y=y)
+
+    def with_rotation(self, rotation: float) -> Camera:
+        """Return the same view rolled to a given angle, in radians."""
+        return replace(self, rotation=rotation)
+
+    def aligned_to_surface(self, planet: Disc, surface: float) -> Camera:
+        """Return the same view rolled so that local *up* is screen up.
+
+        On a closed surface, up is radially outward from the planet centre, and
+        that direction differs at every position -- at the far side of the world
+        it is the exact opposite of what it is here. Without this the ground
+        tilts as you walk along it and is upside down halfway round.
+        """
+        theta = 2.0 * math.pi * (surface % planet.circumference) / planet.circumference
+        return self.with_rotation(theta - math.pi * 0.5)
 
     def focused_on_surface(
         self, planet: Disc, surface: float, height: float = 0.0

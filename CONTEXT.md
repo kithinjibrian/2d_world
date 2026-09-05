@@ -1330,9 +1330,81 @@ None.
 
 ---
 
-## SESSION 16 — 2026-09-05 — Camera rotation and cursor zoom — open
+## SESSION 16 — 2026-09-05 — Camera rotation and cursor zoom — closed
 
 Branch: feat/viewer-rotation
+
+### WHAT WAS DONE
+
+Three things the user asked about: mouse zoom, rotation, and whether the planet revolves.
+
+**Mouse zoom was already wired and was being silently discarded.** `MOUSEWHEEL` called
+`zoomed_about`, which moves the focus so the point under the cursor stays put — and then
+`_camera_for` overrode the focus completely on the next line, because following re-centres the
+camera every frame. So every scroll zoomed to the middle of the window regardless of the pointer.
+Measured before fixing: focus 2.0e-9 after `zoomed_about`, 1.000006 after the follow override.
+
+The fix is `_on_zoom`, which cannot move the focus on the ground and instead moves the **anchor**,
+so the surface point under the cursor stays under it. That works precisely because the camera is now
+rolled to local vertical there, so screen x runs along the surface and screen y away from it. Also
+added the legacy button-4/5 wheel path, since some setups deliver scrolling that way rather than as
+`MOUSEWHEEL`.
+
+**Camera roll.** On a closed surface "up" is radially outward, which points a different way at every
+position and is exactly inverted on the far side of the world. Without roll the ground tilts as you
+walk and turns upside down halfway round. `Camera.rotation` plus `aligned_to_surface` fixes it, and
+`_camera_for` applies it whenever the view is on the ground. Verified at eight points around the
+world: up is up and the ground runs horizontally at every one.
+
+Refactored every camera-returning method to `dataclasses.replace` while adding the field. The old
+versions listed each field positionally, which is how `reference_length` had to be threaded through
+five call sites by hand when it was added — a new field would have had the same problem, silently.
+
+**Does Vellum revolve? Yes — and it does not spin.** It orbits Kell, integrated and visible. It has
+no rotation about itself: that was excluded from the orbit layer's scope deliberately. The
+consequence is that **Vellum has no day**. Insolation varies with orbital distance only; no part of
+the surface ever faces away from Kell. That is a gap rather than an impossibility — rotation is
+perfectly available in two dimensions, where angular momentum is a signed scalar rather than a
+vector — and it needs its own PRP. Recorded as MEMORY.md decision 22.
+
+**Two sign conventions were pinned by tests that initially disagreed with the code.** The vertical
+drag last session, and the roll direction this session: a positive roll turns the *camera*
+counter-clockwise, so the world appears to turn clockwise. Both times the implementation was
+self-consistent and my expectation was not. The roll test now says which way and why, because
+getting that sign backwards puts the ground upside down and looks like a bug in the alignment
+instead.
+
+### FILES CREATED OR MODIFIED
+
+    sim/tests/view/test_rotation.py — NEW. Roll transform, alignment round the world, cursor zoom
+    sim/view/camera.py    — rotation field; with_rotation; aligned_to_surface; replace() throughout
+    sim/view/app.py       — _on_zoom; roll applied on the ground; legacy wheel buttons
+    MEMORY.md (decision 22), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+339 total, 28 new. Round trip under roll at five angles; a full turn is the identity; roll does not
+move the focus; zoom-about-cursor still holds its point when rolled; up is up and the ground is
+level at six points around the world; the far side is not inverted; the surface point under the
+cursor survives a zoom; and zooming at the centre leaves the anchor alone.
+
+### DECISIONS MADE
+
+- Roll is applied automatically on the ground rather than being a manual control. Manual roll would
+  be a way to make the ground crooked, which is not a feature.
+- Zoom on the ground moves the anchor, not the focus, for the reason above.
+- Camera construction goes through `dataclasses.replace` so a new field cannot be dropped silently.
+
+### PENDING DECISIONS OPENED
+
+None, but MEMORY.md decision 22 records planetary rotation as a known gap needing a PRP.
+
+### STILL OPEN AT CLOSE
+
+- Branch `feat/viewer-rotation` unmerged, unpushed.
+- **Vellum does not spin.** No day, no night, no diurnal cycle. Needs its own PRP.
+- The ground is drawn as a thin line rather than filled.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1342,16 +1414,20 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-The viewer is on branch `feat/viewer-input`, unmerged. Merge it first.
+Branch `feat/viewer-rotation` is unmerged. Merge it first.
 
-**The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
-follow from having no third direction. It is also the first layer that can produce a number the
-monograph only guessed — the basin count. Leave stratification and the anoxic depth to a
-climate-facing layer, and erosion, which writes to the terrain residual, to its own PRP.
+Three candidates, in the order I would take them:
 
-One small open question for the user, not blocking: the ground is drawn as a thin line rather than
-filled, so a close view is almost entirely background. Filling below the profile would make ground
-read as ground, and would matter more once there is water to draw against it.
+1. **Water** — basins as local minima of `h`, filling, and the unbranched runs that follow from
+   having no third direction. The first layer that can produce a number the monograph only guessed:
+   the basin count.
+2. **Planetary rotation** — Vellum currently has no day (MEMORY.md decision 22). A rotation rate is
+   a new world constant, the surface frame turns relative to inertial space, and insolation becomes
+   a function of surface position as well as orbital phase. Small module, real consequences.
+3. **Filled ground** in the viewer — cosmetic, but it will matter once there is water to draw
+   against the profile.
+
+Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

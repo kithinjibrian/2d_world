@@ -8,7 +8,7 @@ checked by reading.
 Controls
 --------
     drag            pan; on the ground, walks along it and changes height
-    scroll / + -    zoom about the cursor
+    scroll / + -    zoom about the cursor, on the ground too
     arrow keys      pan; left/right walks along the ground when zoomed in
     [ ]             step along Vellum's orbit
     f               follow Vellum (default) or hold position
@@ -146,7 +146,18 @@ def run(width: int | None = None, height: int | None = None) -> None:
                 )
             elif event.type == pygame.MOUSEWHEEL:
                 mx, my = pygame.mouse.get_pos()
-                camera = camera.zoomed_about(_ZOOM_STEP**event.y, float(mx), float(my))
+                camera, anchor, anchor_height = _on_zoom(
+                    camera, planet, following, anchor, anchor_height,
+                    _ZOOM_STEP**event.y, float(mx), float(my),
+                )
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (4, 5):
+                # Some setups still deliver the wheel as legacy button presses.
+                mx, my = pygame.mouse.get_pos()
+                camera, anchor, anchor_height = _on_zoom(
+                    camera, planet, following, anchor, anchor_height,
+                    _ZOOM_STEP if event.button == 4 else 1.0 / _ZOOM_STEP,
+                    float(mx), float(my),
+                )
             elif event.type == pygame.KEYDOWN:
                 camera, step, following, running, anchor = _on_key(
                     event.key, camera, step, following, running, planet, width, anchor
@@ -215,6 +226,45 @@ def _on_drag(
     )
 
 
+def _on_zoom(
+    camera: Camera,
+    planet: Disc,
+    following: bool,
+    anchor: float,
+    anchor_height: float,
+    factor: float,
+    cursor_x: float,
+    cursor_y: float,
+) -> tuple[Camera, float, float]:
+    """Zoom about the cursor. Returns (camera, anchor, height).
+
+    Away from the surface this is ``Camera.zoomed_about``. On the ground it
+    cannot be: following re-centres the camera every frame, so moving the focus
+    is undone before it is ever drawn -- which is why every scroll zoomed to the
+    middle of the window regardless of where the pointer was. The analogue is to
+    move the *anchor* so the surface point under the cursor stays under it.
+
+    That works because the camera is rolled to local vertical on the ground, so
+    screen x runs along the surface and screen y runs away from it.
+    """
+    zoomed = camera.zoomed(factor)
+    if not (following and camera.span <= planet.circumference):
+        return camera.zoomed_about(factor, cursor_x, cursor_y), anchor, anchor_height
+
+    along = cursor_x - camera.width * 0.5
+    away = camera.height * 0.5 - cursor_y
+    before_metres = camera.metres_per_pixel
+    after_metres = zoomed.metres_per_pixel
+
+    surface_under_cursor = anchor + along * before_metres
+    height_under_cursor = anchor_height + away * before_metres
+    return (
+        zoomed,
+        (surface_under_cursor - along * after_metres) % planet.circumference,
+        max(0.0, height_under_cursor - away * after_metres),
+    )
+
+
 def _camera_for(
     camera: Camera,
     planet: Disc,
@@ -233,7 +283,9 @@ def _camera_for(
         return camera
     if camera.span > planet.circumference:
         return camera.focused_on(planet.centre_x, planet.centre_y)
-    return camera.focused_on_surface(planet, anchor, anchor_height)
+    return camera.focused_on_surface(planet, anchor, anchor_height).aligned_to_surface(
+        planet, anchor
+    )
 
 
 def _rebuild(
