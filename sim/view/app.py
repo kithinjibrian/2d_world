@@ -35,6 +35,7 @@ from sim.rotation import Spin, breakup_rate
 from sim.star import Kell
 from sim.surface import Terrain
 from sim.units import LENGTH, LUMINOSITY, MASS, TIME, VELOCITY, Quantity
+from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc
 from sim.view.render import OrbitTrace, PlanetDisc, ScaleBar, StarDisc, TerrainTrace
@@ -185,7 +186,9 @@ def run(width: int | None = None, height: int | None = None) -> None:
             centre_y=float(position[1]),
             circumference=planet.circumference,
         )
-        scene = _rebuild(star, trajectory, planet, terrain, spin, step * _TIMESTEP)
+        scene = _rebuild(
+            star, trajectory, planet, terrain, spin, step * _TIMESTEP, running_clock
+        )
         looking = _camera_for(camera, planet, following, anchor, anchor_height)
 
         surface.fill(_BACKGROUND)
@@ -296,6 +299,12 @@ def _camera_for(
     """
     if not following:
         return camera
+    if camera.band is ScaleBand.SYSTEM:
+        # Do not chase the planet while the whole system is in view. Following
+        # a body that is orbiting drags the entire background across the window
+        # -- the star slides past and the system appears to move. At this scale
+        # the system is the subject and the planet is the thing moving in it.
+        return camera
     if camera.span > planet.circumference:
         return camera.focused_on(planet.centre_x, planet.centre_y)
     return camera.focused_on_surface(planet, anchor, anchor_height).aligned_to_surface(
@@ -310,6 +319,7 @@ def _rebuild(
     terrain: Terrain,
     spin: Spin | None = None,
     time: float = 0.0,
+    clock_running: bool = True,
 ) -> Scene:
     scene = Scene()
     scene.add(StarDisc(star))
@@ -318,7 +328,10 @@ def _rebuild(
     ground = TerrainTrace(planet, terrain, spin=spin)
     ground.time = time
     scene.add(ground)
-    scene.add(ScaleBar(terrain))
+    bar = ScaleBar(terrain, spin)
+    bar.time = time
+    bar.clock_running = clock_running
+    scene.add(bar)
     return scene
 
 

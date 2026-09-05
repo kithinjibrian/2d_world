@@ -42,6 +42,10 @@ _GOLD: Final = (198, 160, 70)
 _TEAL: Final = (74, 176, 158)
 _DAY: Final = (214, 196, 142)
 _NIGHT: Final = (44, 62, 60)
+#: Vellum's own marker colour. Distinct from the orbit trace so a test can
+#: tell whether the planet was drawn or merely overlapped by its own path.
+VELLUM: Final = (126, 214, 200)
+_MIN_PLANET_PIXELS: Final = 3
 
 #: Pixel coordinates handed to SDL are clipped to this box. SDL takes C ints,
 #: so a coordinate far outside the viewport must never reach it -- see the
@@ -133,6 +137,16 @@ class PlanetDisc:
     def draw(self, camera: Camera, target: object) -> None:
         surface = cast(pygame.Surface, target)
         planet = self._planet
+
+        # Below a few pixels the outline has nothing to draw -- at the opening
+        # view Vellum's radius is 0.0013 px -- so mark it instead. StarDisc has
+        # always had this floor; the planet did not, and simply was not drawn.
+        radius_px = planet.radius * camera.scale
+        if radius_px < _MIN_PLANET_PIXELS:
+            centre = _point(camera.world_to_screen(planet.centre_x, planet.centre_y))
+            pygame.draw.circle(surface, VELLUM, centre, _MIN_PLANET_PIXELS)
+            return
+
         # Sample the arc the viewport actually covers, so ground zoom spends its
         # samples where they are visible rather than around the whole world.
         half_arc = min(
@@ -161,8 +175,14 @@ class ScaleBar:
 
     bands: Final = frozenset(ScaleBand)
 
-    def __init__(self, terrain: Terrain | None = None) -> None:
+    def __init__(self, terrain: Terrain | None = None, spin: Spin | None = None) -> None:
         self._terrain = terrain
+        self._spin = spin
+        #: Simulation time and whether it is advancing. Set by the caller each
+        #: frame. Shown because a world that starts moving on its own is
+        #: alarming when nothing on screen says it is running.
+        self.time = 0.0
+        self.clock_running = True
 
     def draw(self, camera: Camera, target: object) -> None:
         surface = cast(pygame.Surface, target)
@@ -186,6 +206,13 @@ class ScaleBar:
             if self._terrain is not None and self._terrain.is_clamped_at(mpp):
                 label += "   [below terrain detail]"
             surface.blit(font.render(label, True, _INK), (20, y + 8))
+
+            state = "running" if self.clock_running else "paused"
+            clock = f"t = {self.time:.4f}   [{state} — space]"
+            if self._spin is not None and self._spin.sidereal_day > 0.0:
+                days = self.time / self._spin.sidereal_day
+                clock = f"day {days:.2f}   " + clock
+            surface.blit(font.render(clock, True, _DIM), (20, y + 24))
 
 
 class TerrainTrace:

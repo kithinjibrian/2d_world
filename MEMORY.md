@@ -501,6 +501,29 @@ round and is never more than half the world.
 
 ---
 
+### 25. Following is only right when the followed thing is not the subject
+
+**Decision:** The camera does not follow Vellum at SYSTEM zoom. It follows from PLANETARY inward:
+the planet's centre while the planet fits the view, a point on its surface once it does not.
+
+**Why:** following a body that is orbiting drags the entire background across the window. With the
+clock running, the star slid past and the system appeared to be moving — the planet was the only
+thing standing still, which is exactly backwards. At system scale the system is the subject and the
+planet is the thing moving through it; from planetary scale inward, the planet is the subject.
+
+Also: **anything that can shrink below a pixel needs a minimum drawn size.** Vellum's radius at the
+opening view is 0.0013 px, so the outline had nothing to draw and the planet was absent from its own
+viewer. The star had carried a `max(2, ...)` floor since it was written; the planet did not.
+
+**Rules out:** Following at every zoom. Drawing a body only at its true size.
+
+**And a test that passed for the wrong reason.** The first version asserted "something is drawn near
+the planet" — which passed whether or not the planet existed, because the orbit trace runs exactly
+through its position. It now checks for Vellum's own marker colour. A visual assertion that cannot
+name what it is looking for is not an assertion.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working

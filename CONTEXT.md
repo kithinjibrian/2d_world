@@ -1580,9 +1580,72 @@ None.
 
 ---
 
-## SESSION 19 — 2026-09-06 — System view regressions — open
+## SESSION 19 — 2026-09-06 — System view regressions — closed
 
 Branch: fix/viewer-system-view
+
+### WHAT WAS DONE
+
+Two regressions the user hit immediately after the rotation layer shipped, both caused by it.
+
+**1. The whole system slid across the window.** Session 18 started the clock by default so the
+world could be seen turning. But `_camera_for` follows the planet whenever the viewport is wider
+than the circumference — which at system zoom is always true — so the camera tracked an orbiting
+body and dragged the background with it. Measured: the camera focus moved from `(+1.0000, +0.0024)`
+to `(-0.6424, +1.2572)` over 1200 steps while the star sat still in world space, so the star slid
+right across the view. The planet was the only thing not moving, which is exactly backwards.
+
+Following is now suppressed at SYSTEM zoom. At that scale the system is the subject and the planet
+is the thing moving through it; from PLANETARY inward the planet is the subject and following is
+right.
+
+**2. Vellum was invisible.** Its radius at the opening view is **0.0013 pixels**, so `PlanetDisc`'s
+outline had nothing to draw. The star has carried a `max(2, ...)` floor since it was written; the
+planet never had one. It now draws a marker below three pixels.
+
+**A test that passed for the wrong reason, caught before it shipped.** The first visibility test
+asserted "something other than background is drawn near the planet" — and it passed *before* the fix,
+because the orbit trace runs exactly through the planet's position. It now checks for Vellum's own
+marker colour, which is why the colour exists as a named constant. A visual assertion that cannot
+name what it is looking for is not an assertion; that is the same lesson as Session 14, arriving in
+a subtler form.
+
+Both fixes were confirmed by reversion: without the system-view fix, 1 test fails; without the
+planet marker, 4 fail.
+
+**Also added a clock readout.** The world starting to move on its own is alarming when nothing on
+screen says it is running. The scale bar now shows the day count, the time, and `running`/`paused`
+with the key that toggles it.
+
+### FILES CREATED OR MODIFIED
+
+    sim/view/app.py       — no following at SYSTEM zoom; clock state passed to the readout
+    sim/view/render.py    — PlanetDisc minimum size and a named marker colour; clock readout
+    sim/tests/view/test_zoom_journey.py — both regressions, tested by colour rather than by
+                            "not background"
+    MEMORY.md (decision 25), CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+410 total, 6 new. The camera does not move while the planet orbits at system zoom; it still follows
+once the planet is worth following; Vellum's marker is present at the opening view and at three
+further zoom-outs.
+
+### DECISIONS MADE
+
+- Follow from PLANETARY inward only.
+- Anything that can shrink below a pixel gets a minimum drawn size.
+- Visual tests assert a specific colour, not merely that the background changed.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- Branch `fix/viewer-system-view` unmerged, unpushed.
+- The ground is still a thin line rather than filled.
+- No water. DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1592,18 +1655,18 @@ Open a new session entry in this file first, with state `open` and the branch na
 
 Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-Branch `sim/rotation-layer` is unmerged. Merge it first, then run
-`.venv/bin/python -m sim.view.app`, zoom to the ground and press `space` — a point passes from
-daylight into night as the world turns.
+Branch `fix/viewer-system-view` is unmerged. Merge it first.
 
 **The next PRP is water**: basins as local minima of `h`, filling, and the unbranched runs that
-follow from having no third direction. It is the first layer that can produce a number the monograph
-only guessed — the basin count. Use `sim.periodic.distance` for anything comparing positions on the
-surface; the rotation layer established why subtraction will not do.
+follow from having no third direction. The first layer that can produce a number the monograph only
+guessed — the basin count. Use `sim.periodic.distance` for anything comparing surface positions.
+
+Carry two lessons forward. From Session 14 and again from this one: **a visual test must name what
+it is looking for.** "Not background" passed here whether or not the planet was drawn, because its
+own orbit ran through the same pixels. And from this session: **anything that can shrink below a
+pixel needs a minimum drawn size**, which will apply to every creature the life layer adds.
 
 Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry), -014 (transfer).
-And the ground is drawn as a thin line, which will matter more once there is water to draw against
-the profile.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

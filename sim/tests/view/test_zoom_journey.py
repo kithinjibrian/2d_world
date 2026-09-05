@@ -26,8 +26,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from sim.view import Camera, ScaleBand
+from sim.view import Camera, Disc, ScaleBand
 from sim.view.app import _camera_for, _demo_world, _rebuild
+from sim.view.render import VELLUM
 
 WIDTH, HEIGHT = 640, 400
 BACKGROUND = (14, 18, 16)
@@ -126,3 +127,83 @@ class TestFollowingLandsOnTheGround:
             sx, sy = focused.surface_to_screen(planet, 0.0, 0.0)
             assert 0 <= float(sx) <= WIDTH, f"ground off-screen at {camera.band.value}"
             assert 0 <= float(sy) <= HEIGHT, f"ground off-screen at {camera.band.value}"
+
+
+class TestTheSystemViewHoldsStill:
+    """Following a moving planet at system zoom drags the whole view.
+
+    `_camera_for` followed the planet whenever the viewport was wider than the
+    circumference — which at system zoom is always. With the clock running, the
+    camera tracked the orbiting planet and the star slid right across the
+    window. What you want at system scale is to watch the planet move against a
+    fixed background, which is the opposite.
+    """
+
+    def test_the_camera_does_not_move_at_system_zoom(self, world) -> None:  # type: ignore[no-untyped-def]
+        _, trajectory, planet, _, _ = world
+        camera = Camera(0.0, 0.0, WIDTH / 6.0, WIDTH, HEIGHT,
+                        reference_length=planet.circumference)
+        assert camera.band is ScaleBand.SYSTEM
+
+        focuses = set()
+        for step in (0, 400, 800, 1200):
+            position = trajectory.positions[step % len(trajectory.positions)]
+            moved = Disc(float(position[0]), float(position[1]), planet.circumference)
+            looking = _camera_for(camera, moved, following=True, anchor=0.0)
+            focuses.add((looking.focus_x, looking.focus_y))
+        assert len(focuses) == 1, "the view moved while the planet orbited"
+
+    def test_it_still_follows_once_the_planet_is_worth_following(self, world) -> None:  # type: ignore[no-untyped-def]
+        _, _, planet, _, _ = world
+        close = Camera(0.0, 0.0, WIDTH / (planet.circumference * 10.0), WIDTH, HEIGHT,
+                       reference_length=planet.circumference)
+        assert close.band is not ScaleBand.SYSTEM
+        looking = _camera_for(close, planet, following=True, anchor=0.0)
+        assert (looking.focus_x, looking.focus_y) != (close.focus_x, close.focus_y)
+
+
+class TestThePlanetIsVisibleAtEveryZoom:
+    """A world you cannot see is not much of a viewer.
+
+    At the opening view the planet's radius is 0.0013 px. StarDisc has a
+    minimum size; PlanetDisc did not, so Vellum simply was not drawn.
+    """
+
+    @staticmethod
+    def _marked(surface: pygame.Surface, x: int, y: int) -> bool:
+        """Is Vellum's own marker colour present near (x, y)?
+
+        Checked by colour, not by "something is not background". The orbit
+        trace passes exactly through the planet's position, so a background
+        test passes whether or not the planet is drawn at all -- which it did,
+        on the first version of this test.
+        """
+        patch = pygame.surfarray.array3d(surface)[
+            max(0, x - 6) : x + 7, max(0, y - 6) : y + 7
+        ]
+        return bool(np.all(patch == np.array(VELLUM), axis=2).any())
+
+    def test_the_planet_is_marked_at_system_zoom(self, world) -> None:  # type: ignore[no-untyped-def]
+        star, trajectory, planet, terrain, spin = world
+        camera = Camera(0.0, 0.0, WIDTH / 6.0, WIDTH, HEIGHT,
+                        reference_length=planet.circumference)
+        surface = pygame.Surface((WIDTH, HEIGHT))
+        surface.fill(BACKGROUND)
+        _rebuild(star, trajectory, planet, terrain, spin).draw(camera, surface)
+        sx, sy = camera.world_to_screen(planet.centre_x, planet.centre_y)
+        assert self._marked(surface, int(float(sx)), int(float(sy))), (
+            "Vellum is not drawn at system zoom -- its radius there is 0.0013 px"
+        )
+
+    @pytest.mark.parametrize("scale_factor", [1.0, 1e2, 1e4])
+    def test_the_marker_survives_zooming_further_out(self, world, scale_factor: float) -> None:  # type: ignore[no-untyped-def]
+        star, trajectory, planet, terrain, spin = world
+        camera = Camera(0.0, 0.0, (WIDTH / 6.0) / scale_factor, WIDTH, HEIGHT,
+                        reference_length=planet.circumference)
+        surface = pygame.Surface((WIDTH, HEIGHT))
+        surface.fill(BACKGROUND)
+        _rebuild(star, trajectory, planet, terrain, spin).draw(camera, surface)
+        sx, sy = camera.world_to_screen(planet.centre_x, planet.centre_y)
+        x, y = int(float(sx)), int(float(sy))
+        if 0 <= x < WIDTH and 0 <= y < HEIGHT:
+            assert self._marked(surface, x, y)
