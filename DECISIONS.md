@@ -12,45 +12,6 @@ Rules:
 
 ## OPEN — Requires human input before implementation
 
-### DECISION-015 — Where does dimension checking happen?
-
-**Status:** open
-**Raised:** 2026-09-05 — Session 6
-**Resolved by:** human
-**Blocks:** `PRPs/units-layer.md`. It changes the module's public API, so it cannot be deferred past
-approval.
-
-**Question:** Are dimensions carried at runtime by every quantity, or checked only at boundaries and
-in tests?
-
-**Options:**
-- A) **Runtime `Quantity` everywhere.** Every value carries its dimension; every operation checks.
-  Catches everything, including mistakes inside kernels. Costs a wrapper object or a dtype on every
-  array operation — real overhead in an inner loop, and DECISION-009 means sweeping a grid of worlds,
-  so inner-loop cost is multiplied by the size of the scan.
-- B) **Test-time only.** Plain numpy floats everywhere. Dimensions are declared symbolically and
-  asserted against formulas in tests, never carried by values. Zero runtime cost. Misses any error
-  in a code path no test exercises.
-- C) **Boundaries and tests — `Quantity` at module edges, raw arrays inside kernels.** Public
-  functions accept and return dimensioned quantities and validate on the way in; internal numerics
-  operate on unwrapped arrays. Costs one check per call rather than per element.
-
-**Notes:** Recommend **C**. The failure this module exists to prevent is a constant or a formula
-entering with the wrong dimensions — that happens at definition and at composition, which are
-exactly the boundaries, not inside a loop that has already been handed correct arrays. C catches
-essentially the whole risk class at a cost that does not scale with the grid, and it keeps kernels
-as plain numpy, which is also what keeps them readable and fast.
-
-A is the safest and the one to choose if the scan turns out to be cheaper than expected or if
-correctness worries outweigh throughput. B is the cheapest and is defensible only because the
-discriminating tests in the units PRP catch the realistic mistakes — but it leaves no guard on code
-written later by a session that forgets to write the test.
-
-Whichever is chosen, the named-dimension table stays and the three discriminating tests stay; this
-decision only governs whether dimensions ride along with values at runtime.
-
----
-
 ### DECISION-012 — What counts as habitable?
 
 **Status:** open
@@ -232,6 +193,33 @@ to derive the star from, because by then there will be a map showing which lumin
   evolution. It never returns a plausible default. A stub that answers everything is never revisited.
 - Any result depending on it is reported as a consequence of a chosen parameter, not a finding about
   two-dimensional physics.
+
+**Copied to MEMORY.md:** yes
+
+---
+
+### DECISION-015 — Where does dimension checking happen?
+
+**Status:** resolved
+**Raised:** 2026-09-05 — Session 6
+**Resolved:** 2026-09-05 — Session 7
+
+**Question:** Are dimensions carried at runtime by every quantity, or checked only at boundaries and
+in tests?
+
+**Outcome:** **At module boundaries.** `Quantity` pairs a magnitude with a `Dimension` and is what
+public functions accept and return; `Quantity.magnitude(expected)` validates and unwraps to a plain
+float or array for the numerics inside. Kernels stay raw numpy.
+
+**Rationale:** The failure this layer exists to catch — a constant or a formula composed with the
+wrong dimensions — happens at definition and composition, which are exactly the boundaries. It does
+not happen inside a loop already holding correct arrays. So boundary checking catches essentially
+the whole risk class at one check per call rather than one per element, which matters because
+DECISION-009 multiplies any inner-loop cost by the size of the parameter scan.
+
+Naming the expected dimension at the unwrap site turned out to be the load-bearing part, not an
+inconvenience: it makes the caller state what it believes it is holding, and that belief is what
+gets checked.
 
 **Copied to MEMORY.md:** yes
 

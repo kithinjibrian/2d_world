@@ -9,6 +9,9 @@ Never deleted. Older entries are never modified.
 ## [Unreleased]
 
 ### Added
+- The units layer — the simulation's first module. Every physical quantity now carries checkable
+  two-dimensional dimensions, the natural unit system fixes `G₂` and `σ₂` to 1, and formulas written
+  with a three-dimensional scaling law fail a test rather than producing a plausible number.
 - Context engineering system for AI sessions: behavioral rules, session handoff log, decision
   register, PRP templates, design system, and code style guide.
 - `docs/AXIOMS.md` — the project's axioms in three tiers (geometry and mechanics, fundamental

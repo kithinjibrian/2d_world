@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+
+# Generated worlds and figures — reproducible from a seed, never committed
+sim/out/
+*.npz
+*.h5

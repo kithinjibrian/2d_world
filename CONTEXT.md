@@ -514,9 +514,102 @@ None. One was opened rather than assumed.
 
 ---
 
-## SESSION 7 — 2026-09-05 — Units layer implementation — open
+## SESSION 7 — 2026-09-05 — Units layer implementation — closed
 
 Branch: setup/context-system
+
+### WHAT WAS DONE
+
+DECISION-015 answered (boundaries), `PRPs/units-layer.md` approved, and the units layer implemented
+test-first. **This is the project's first code.** 101 tests, `mypy --strict` clean, `ruff` clean.
+
+Tests were written and run before any implementation existed — the first run failed on four
+collection errors, which is the correct starting state and is recorded here because a test-first
+claim is worth nothing without it.
+
+**The acceptance criterion that mattered was the mutation check**, and it was run rather than
+assumed. Each three-dimensional form was substituted in turn and the suite re-run:
+
+    gravity  -> inverse-square          11 failed
+    density  -> per volume               5 failed
+    emission -> T^4                      8 failed
+    flux     -> per area                10 failed
+    pressure -> per area                 8 failed
+    viscosity-> M L^-1 T^-1              4 failed
+
+Every one is caught. `named.py` was restored byte-identically afterwards and the suite is green.
+This is the whole value of the module: it is defined by what it refuses to accept, and a test that
+cannot fail would have proved nothing.
+
+**Environment.** Nothing was installed on this machine — no pytest, mypy, ruff or numpy, and no pip
+in the stdlib venv (`ensurepip` is absent, as on stock Ubuntu without `python3-venv`). `uv` was
+present at `~/.local/bin/uv` with network access, so `.venv/` was created and populated with it.
+`uv` is a tool, not a project dependency; `pyproject.toml` declares the real ones and any installer
+can read it. Added `.gitignore`, without which the venv would have been committed.
+
+**Two things the type checker and linter caught that are worth recording**, because both are
+recurring shapes rather than one-off slips:
+- `float ** float` is typed `Any` in typeshed, since a negative base with a fractional exponent is
+  complex. `scale_factor` now uses `math.pow`, whose bases are positive by construction. Any future
+  module doing exponentiation under `--strict` will hit this.
+- A frozen dataclass field annotated `Fraction` makes the *constructor* reject `int`, since the
+  generated `__init__` takes the field's declared type. The fields are now `Exponent = Fraction |
+  int` with `__post_init__` coercion, and `exponents` is the type-safe accessor returning Fractions.
+
+### FILES CREATED OR MODIFIED
+
+    pyproject.toml             — NEW. Project metadata, pytest/mypy/ruff config
+    .gitignore                 — NEW. Caches, .venv, generated worlds
+    sim/__init__.py            — NEW
+    sim/errors.py              — NEW. VellumError, DimensionError, InvariantError
+    sim/units/dimension.py     — NEW. Fraction-exponent dimension algebra
+    sim/units/named.py         — NEW. The 2D named-dimension table
+    sim/units/quantity.py      — NEW. Boundary type; magnitude() validates and unwraps
+    sim/units/system.py        — NEW. Natural units; G2 = 1 and sigma_2 = 1 close the system
+    sim/units/constants.py     — NEW. G2 and SIGMA_2 as dimensioned Quantities
+    sim/units/__init__.py      — NEW. Public surface
+    sim/tests/units/*.py       — NEW. 101 tests across four files
+    DECISIONS.md               — DECISION-015 resolved
+    MEMORY.md                  — decisions 14 and 15; state and next-session block
+    CHANGELOG.md, CONTEXT.md
+
+### TESTS WRITTEN
+
+101, in four files, in the three kinds the TESTING RULE requires:
+
+- **Dimensional.** The algebra; the named-dimension table asserted line for line against
+  `docs/AXIOMS.md` §2; and the three discriminating cases — `G₂M/r` is an acceleration while
+  `G₂M/r²` is not, `2πRσ₂T³` is a power while `4πR²σ₂T⁴` is not, `ρgh` gives 2D pressure only with a
+  per-area density. Plus kinematic viscosity as the case that does *not* differ in 2D, and an
+  explicit test that no 3D name exists in the registry.
+- **Invariant.** Natural-unit closure over five anchor pairs — `G₂` and `σ₂` both evaluate to 1 for
+  every one; `T = L/√M` and `Θ = (MLT⁻³)^⅓` confirmed; SI round trip; every base unit and scale
+  factor finite; dimensions immutable, hashable, and never mutated by algebra.
+- **Regression.** Recorded as not applicable — nothing here is stochastic or generated — so the
+  omission reads as deliberate rather than forgotten.
+
+`TestReynoldsDiscriminatesNothing` asserts that `ρvL/μ` is dimensionless under *both* the 2D and 3D
+forms. It is a test that documents a non-test, kept so nobody later adds a Reynolds check believing
+it proves something.
+
+### DECISIONS MADE
+
+- DECISION-015 resolved: checking at module boundaries.
+- `uv` adopted for environment management. Not a project dependency and not added to STACK — it
+  installs what `pyproject.toml` declares, and pip would do as well if it existed here.
+
+### PENDING DECISIONS OPENED
+
+None.
+
+### STILL OPEN AT CLOSE
+
+- **Still not pushed.** Branch `setup/context-system` is local, fourteen commits.
+- The apsidal precession result and the 2+1D graviton count remain hand derivations. The orbit
+  layer is where precession finally gets checked, and its PRP should make that an acceptance
+  criterion.
+- DECISION-012 still blocks the scan.
+- `scipy` and `matplotlib` are in STACK but not installed; nothing needs them yet.
 
 ---
 
@@ -524,22 +617,22 @@ Branch: setup/context-system
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order, then `docs/AXIOMS.md`
-and `PRPs/units-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, and this file — in that order, then `docs/AXIOMS.md`.
 
-**Do not write code yet.** `PRPs/units-layer.md` is written but not approved, and it is blocked on
-**DECISION-015** — whether dimensions are carried at runtime, checked only in tests, or validated at
-module boundaries with raw arrays inside kernels. The recommendation is boundaries. That answer
-changes the module's public API, so it cannot be deferred into implementation.
+The units layer is done and green. **The next artefact is the PRP for the orbit layer**, not code.
 
-Once DECISION-015 is answered and the PRP is approved, implement it test-first. The acceptance
-criteria include one step that is easy to skip and is the whole point: **break a formula to its
-inverse-square form and confirm the suite goes red.** A test that cannot fail proves nothing, and
-this module's entire value is in what it refuses to accept.
+That PRP should carry two acceptance criteria that finally check hand derivations recorded in
+`docs/AXIOMS.md` §3 and never confirmed numerically:
+- **Apsidal regression of ~105° per orbit** for a near-circular orbit under `F ∝ 1/r`, so a season
+  works round the calendar in ~3.4 orbits. Derived from `ω_r/ω_θ = √2`.
+- **No trajectory is ever unbound**, at any launch speed — the logarithmic potential admits no
+  escape velocity, so an integrator producing an escaping orbit is broken.
 
-After the units layer, the order is: orbit → planet → surface → water → air → life, with Kell
-supplied rather than solved. Every layer after this one needs a screening path as well as a full
-solve.
+It is also the first layer to need architecture rule 8 (a screening path as well as a full solve),
+and the first to consume the stubbed Kell, which must raise rather than default.
+
+Environment: `.venv/` exists, created with `uv`; dependencies are declared in `pyproject.toml`.
+Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 
 Also worth putting to the user: **DECISION-012**, what counts as habitable. It blocks the scan.
 

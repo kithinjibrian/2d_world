@@ -244,9 +244,49 @@ them it is the bad kind of shortcut:
 
 ---
 
+### 14. Dimensions are checked at module boundaries, not in kernels
+
+**Decision:** `Quantity` (a magnitude plus a `Dimension`) is what public functions accept and
+return. `Quantity.magnitude(expected)` validates and unwraps to a plain float or array; the numerics
+inside work on raw numpy (DECISION-015).
+
+**Why:** The mistake this guards against happens at definition and composition — writing `G₂M/r²`,
+or giving a constant the wrong dimensions — not inside a loop that has already been handed correct
+arrays. Boundary checking therefore catches essentially the whole risk class at one check per call
+rather than one per element, which matters because scanning multiplies any inner-loop cost by the
+size of the grid.
+
+Requiring the caller to name the expected dimension at the unwrap site is the load-bearing part: it
+forces the caller to state what it believes it is holding, and that belief is what gets checked.
+
+**Rules out:** Carrying units through inner loops. Dimensioned array types. Any units dependency —
+the layer is ~120 lines of `Fraction` exponent arithmetic and owes nothing to `pint`.
+
+---
+
+### 15. The units layer defines no three-dimensional form, deliberately
+
+**Decision:** `sim/units/` contains no `DENSITY_3D`, no inverse-square helper, no 3D constant. The
+named-dimension table is 2D only, and a test asserts the forbidden names are absent.
+
+**Why:** A name that exists can be selected by accident; a name that does not exist cannot. It is the
+cheapest available enforcement of the project's second anti-pattern, and it costs nothing.
+
+Verified rather than assumed: substituting each 3D form in turn — inverse-square gravity, per-volume
+density, `T⁴` emission, per-area flux, per-area pressure, and the 3D dynamic viscosity — makes
+between 4 and 11 tests fail. The suite catches every one.
+
+**Rules out:** Adding a 3D name "for comparison" or "for the tests". The comparison lives inside the
+discriminating tests, which construct the wrong form locally and assert it is wrong.
+
+---
+
 ## CURRENT PROJECT STATE
 
 ### Fully Working
+- **`sim/units/`** — the first module. Dimension algebra over four base dimensions with `Fraction`
+  exponents, the named-dimension table for 2D, `Quantity` for boundary checking, and the natural
+  unit system in which `G₂` and `σ₂` are both 1. 101 tests, `mypy --strict` and `ruff` clean.
 - `vellum-monograph.html` — 18 slides, 17 inline SVG plates, keyboard and button navigation. Frozen
   reference material.
 - The context system: CLAUDE.md, MEMORY.md, CONTEXT.md, DECISIONS.md, CHANGELOG.md, `.llmignore`,
@@ -255,10 +295,10 @@ them it is the bad kind of shortcut:
   consequences (§3), and the abstraction ledger (§4). Settled and usable.
 
 ### In Progress
-- Nothing. No simulation code exists.
+- Nothing. The units layer is complete and the next layer has no PRP yet.
 
 ### Not Started
-- The entire simulation. `sim/` does not exist yet.
+- Every physics layer: orbit, planet, surface, water, air, life. None has a PRP.
 - No world has been instantiated. The ratios defining one are swept (decision 12), but the predicate
   deciding which grid points count as habitable is DECISION-012 and still open.
 
@@ -266,27 +306,27 @@ them it is the bad kind of shortcut:
 
 ## NEXT SESSION START POINT
 
-Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md — in that order. Then read
-`docs/AXIOMS.md` in full.
+Read CLAUDE.md, then this file, then DECISIONS.md, then CONTEXT.md — in that order, then
+`docs/AXIOMS.md`.
 
-**Write the PRP for the units layer.** It is still the first module and it is unblocked by every open
-decision. Natural units remove the need to invent any magnitude, so the work is mechanical: fix the
-base dimensions (mass, length, time, temperature), express everything else as a product of powers,
-check it automatically. Its tests are dimensional assertions written before any physics, and they
-must include that dimensionless results really are dimensionless — in natural units a slip hides
-behind a constant equal to 1.
+The units layer is done and green. **The next artefact is the PRP for the orbit layer**, not code —
+the PRP rule holds for every module.
 
-Two things settled in Session 5 that shape every layer after it, and should be in that PRP's
-thinking even though they do not change the units layer itself:
-- **Every layer needs a screening path as well as a full solve** (decision 12). Design both at once.
-- **Kell is stubbed and must raise** rather than default (decision 13).
+The orbit layer is where two hand derivations finally get checked, and both should be explicit
+acceptance criteria in its PRP:
+- **Apsidal regression of ~105° per orbit** for a near-circular orbit under `F ∝ 1/r`, giving a
+  season that works round the calendar in ~3.4 orbits. Derived from the ratio `ω_r/ω_θ = √2`; never
+  confirmed numerically.
+- **No trajectory is ever unbound**, at any launch speed. The logarithmic potential admits no escape
+  velocity, so an integrator that ever produces an escaping orbit is broken.
 
-The layer order is now: units → orbit → planet → surface → water → air → life, with the star supplied
-rather than solved. Do not start a layer before the one below it passes its invariant tests.
+Note the orbit layer is the first to need architecture rule 8 — a cheap screening path as well as a
+full solve — and the first to consume the stubbed Kell, which must raise rather than default.
 
-The open decision most worth putting to the user is **DECISION-012** — what counts as habitable.
-It does not block the units layer, but it blocks the scan, and the scan is what the whole
-architecture is now shaped around. Recommendation recorded: liquid water as a cheap coarse screen,
-climate stability layered onto the survivors.
+Environment: `.venv/` exists, managed with `uv`. `uv pip install -r` nothing — dependencies are
+declared in `pyproject.toml`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
+
+Also still open and worth putting to the user: **DECISION-012**, what counts as habitable. It blocks
+the scan.
 
 Do not edit `vellum-monograph.html`. It is frozen; it gets regenerated, not corrected.

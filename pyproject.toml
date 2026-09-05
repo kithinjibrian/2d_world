@@ -1,0 +1,26 @@
+[project]
+name = "vellum-sim"
+version = "0.1.0"
+description = "A simulation of a world with two spatial dimensions."
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26"]
+
+[dependency-groups]
+dev = ["pytest>=8", "mypy>=1.11", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+testpaths = ["sim/tests"]
+pythonpath = ["."]
+
+[tool.mypy]
+strict = true
+files = ["sim"]
+# numpy ships type stubs; nothing else here is third-party
+warn_unreachable = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
