@@ -1872,9 +1872,102 @@ None. DECISION-013 would matter for ice and salinity; neither is in scope.
 
 ---
 
-## SESSION 23 — 2026-09-06 — Water layer implementation — open
+## SESSION 23 — 2026-09-06 — Water layer implementation — closed
 
-Branch: sim/water-layer
+Branch: sim/water-layer — **NOT MERGED. One known correctness defect, described below.**
+
+### WHAT WAS DONE
+
+Implemented the water layer test-first. 509 tests pass, 4 xfail on a known defect, `mypy --strict`
+and `ruff` clean. **It is not merged**, because a physics layer with a known wrong answer is not
+finished, and merging it would say otherwise.
+
+**What is right.** Basin detection, persistence, catchments and drainage are correct and well
+tested. Water area is conserved **exactly** — zero failures across 49,536 fills on random worlds.
+Lakes merge as water rises, sealed lakes exist and hold different levels, and the terrain, ground
+fill and water all draw in the viewer.
+
+**What is wrong.** A lake that merges over a saddle and then drains below it should separate again;
+it does not. Its level can end up beneath its own lip. This shows as a wet fraction that *falls*
+when water is added — impossible — in about 0.2% of random worlds (83 of 49,536 fills), and as four
+disagreements out of 24 against the brute-force oracle, all of order 0.02 in depth with the same wet
+set. Conservation is unaffected. The fix is a post-settle pass that splits any lake whose final
+level lies below an internal saddle; merge-time checks cannot catch it, because each merge in the
+chain is legitimate and only the final drain takes the body below an earlier saddle. Marked
+`xfail(strict=True)` so fixing it forces the markers out.
+
+### THREE BUGS FOUND, TWO FIXED
+
+**1. Plateaus break the alternation of minima and maxima.** Comparing each sample with its immediate
+neighbours, using asymmetric tie-breaking, gave one profile **five maxima and four minima** — so two
+samples fell into no basin at all. Runs of equal height are now collapsed before extrema are found,
+which makes alternation guaranteed. Exact ties are rare in continuous terrain and common in rounded
+data, which is why the real-terrain tests passed while random rounded profiles failed.
+
+**2. `np.empty` hid it.** The catchment map was allocated with `np.empty`, so the uncovered samples
+held uninitialised memory that was read as basin indices — `bincount` then reported a basin 14 in a
+four-basin world, water was distributed to basins that did not exist, and conservation broke. It is
+now `np.full(-1)` with an explicit check that catchments tile the world. **A gap that reads as
+garbage is worse than a gap that reads as an error**, and this one masked a real geometric bug as an
+arithmetic one.
+
+**3. Merging on transient state.** The cascade merged lakes mid-sweep, while water was still in
+transit, joining bodies that never actually met. Transfers now run to convergence before any merge
+is considered. This fixed a class of violations but not the one above.
+
+### THE ORACLE WAS WRONG TOO
+
+The brute-force relaxation used a step factor of 0.5 and **overshot spills**. Water that crosses a
+divide cannot come back, so an overshoot is permanent: a basin that should settle exactly at its
+brim drained past it and stayed drained. At factor 0.1 and below it converges to the cascade's
+answer. So one early "disagreement" was the oracle's fault, not the code's — which is worth
+recording, because an oracle trusted uncritically is just a second implementation with a vote.
+
+### THE FINDING THE PRP WAS BUILT ON, CORRECTED
+
+The PRP called persistence "scale-free". Measured over a 64-fold refinement of one terrain, raw
+minima grow with an exponent of **1.00** and deep basins with **0.28**. Persistence makes the count
+converge far more slowly; it does not make it converge. For terrain fractal at every scale there is
+no sampling-independent basin count. The PRP carries a dated FINDING note and the conclusion is
+unchanged: report the curve, with both threshold and resolution.
+
+### MEASURED
+
+    deeper than      basins          water (x amp*C)  lakes  sealed   wet
+      0.01 RMS         1327                    0.005   1514    1143  0.348
+      0.02 RMS         1067                    0.020   1144     545  0.562
+      0.05 RMS          627                    0.060    480     144  0.667
+      0.10 RMS          321                    0.200    159      30  0.777
+      0.25 RMS           92
+      1.00 RMS            8
+
+The monograph's 1,106 sits between the 0.01 and 0.02 thresholds — which is the point. It is a
+threshold, not a fact about the world, and it was not aimed at.
+
+### PERFORMANCE
+
+`fill` was quadratic: the cascade restarted its scan after every single transfer, taking 19 seconds
+on a 16,384-sample world and pushing the suite from 10 to 114 seconds. Transfers now complete in one
+sweep, the demo world is cached and built at 4,096 samples, and a test that counted distinct pixel
+colours with `np.unique(axis=0)` was replaced by a comparison against one corner pixel. Suite is back
+to 25 seconds.
+
+### FILES CREATED OR MODIFIED
+
+    sim/water/basins.py            — NEW. Merge tree, persistence, catchments, plateau handling
+    sim/water/filling.py           — NEW. Cascade, lakes, conservation
+    sim/water/__init__.py          — NEW
+    sim/tests/water/*.py           — NEW, two files, including the relaxation oracle
+    sim/view/render.py             — filled ground and water; TerrainTrace takes a WaterState
+    sim/view/app.py                — water in the demo world; cached; fewer samples
+    sim/tests/view/*               — updated for the new world tuple and the filled ground
+    PRPs/water-layer.md            — dated FINDING on persistence
+    CONTEXT.md                     — this entry
+
+### STILL OPEN AT CLOSE
+
+- **The lake-separation defect above. The branch is not merged.**
+- DECISION-012, -013, -014 still open.
 
 ---
 
@@ -1882,24 +1975,29 @@ Branch: sim/water-layer
 
 Open a new session entry in this file first, with state `open` and the branch name, and commit it.
 
-Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, `docs/AXIOMS.md`, and
-`PRPs/water-layer.md`.
+Then read CLAUDE.md, MEMORY.md, DECISIONS.md, this file, and `docs/AXIOMS.md`.
 
-**If the water PRP is approved, implement it test-first** on branch `sim/water-layer`. Approval also
-covers one new free parameter: the total water area, a world constant.
+**Branch `sim/water-layer` is not merged and must not be until the defect below is fixed.**
 
-The two mutations that matter: dropping the cascade's overflow must break water-area conservation,
-and building the catchment map by nearest-minimum rather than by descent must break the
-contiguous-arc test. And the layer must report a basin *curve* against persistence, never a bare
-count — the number is a function of the threshold, which is why the monograph's 1,106 is not a
-target and not a check.
+**The defect.** A lake that merges over a saddle and then drains below it should separate again. It
+does not, so its level can end up beneath its own lip, and the wet fraction can fall as water is
+added. Four tests are `xfail(strict=True)` on it, so a fix forces the markers out.
 
-The viewer work includes filling the ground below the terrain profile, which has been outstanding
-since the surface layer and now has a reason: water sitting against an unfilled outline reads as a
-line drawing rather than a world.
+**The fix is a post-settle split pass**, not a merge-time check: every merge in the chain is
+individually legitimate, and only the final drain takes the joined body below an earlier saddle. So
+after the cascade settles, walk each lake's internal saddles and split it wherever its level lies
+below one, then settle again. Repeat to a fixed point.
 
-Also still open: DECISION-012 (habitability, blocks the scan), -013 (chemistry, would matter for ice
-and salinity), -014 (transfer).
+Reproduce with:
+
+    heights = [0.25, 2.57, 3.41, 2.37, 1.04, 3.36, 2.04, 2.04, 3.01, 0.59,
+               3.28, 2.73, 3.15, 0.77, 3.21, 0.77, 0.33]
+
+At area 18.958 basins (2,3) sit at 3.2579; at area 20.0 they merge into (2,3,4,5) and drop to
+3.2100 — below the 3.28 divide that joined them.
+
+The brute-force oracle in `sim/tests/water/test_filling.py` is the tool for this. Use a step factor
+of 0.1 or smaller: at 0.5 it overshoots spills, and water that crosses a divide cannot come back.
 
 Environment: `.venv/`. Run `.venv/bin/pytest`, `.venv/bin/mypy`, `.venv/bin/ruff check sim/`.
 

@@ -35,6 +35,7 @@ from sim.view.bands import ScaleBand
 from sim.view.camera import Camera
 from sim.view.geometry import Disc, contiguous_runs
 from sim.view.sidebar import PANEL_WIDTH, ROW_HEIGHT, TOP, Target
+from sim.water import WaterState
 
 __all__ = [
     "OrbitTrace",
@@ -52,6 +53,9 @@ _TEAL: Final = (74, 176, 158)
 _DAY: Final = (214, 196, 142)
 _NIGHT: Final = (44, 62, 60)
 _RULE: Final = (52, 66, 62)
+_ROCK: Final = (34, 44, 41)
+_WATER: Final = (46, 92, 112)
+_WATER_LIT: Final = (72, 128, 150)
 #: Vellum's own marker colour. Distinct from the orbit trace so a test can
 #: tell whether the planet was drawn or merely overlapped by its own path.
 VELLUM: Final = (126, 214, 200)
@@ -250,11 +254,15 @@ class TerrainTrace:
         terrain: Terrain,
         samples: int = 900,
         spin: Spin | None = None,
+        water: WaterState | None = None,
+        water_samples: int | None = None,
     ) -> None:
         self._planet = planet
         self._terrain = terrain
         self._samples = samples
         self._spin = spin
+        self._water = water
+        self._water_samples = water_samples
         #: Simulation time, set by the caller each frame. Only used to decide
         #: which part of the ground is in daylight.
         self.time = 0.0
@@ -309,6 +317,14 @@ class TerrainTrace:
         ]
         if len(points) < 2:
             return
+
+        # Fill the rock below the profile, then the water on top of it. An
+        # unfilled outline reads as a line drawing rather than a world, and
+        # water drawn against it reads as nothing at all.
+        self._fill_below(surface, camera, arc, heights, _ROCK)
+        if self._water is not None:
+            self._draw_water(surface, camera, arc)
+
         if self._spin is None:
             pygame.draw.aalines(surface, _TEAL, False, points)
             return
@@ -325,6 +341,62 @@ class TerrainTrace:
                 continue
             pygame.draw.aalines(surface, _DAY if is_day else _NIGHT, False, segment)
 
+    def _fill_below(
+        self,
+        surface: pygame.Surface,
+        camera: Camera,
+        arc: NDArray[np.float64],
+        heights: NDArray[np.float64],
+        colour: tuple[int, int, int],
+        floor: NDArray[np.float64] | None = None,
+    ) -> None:
+        """Fill the band between a profile and the ground beneath it.
+
+        The lower edge follows the planet's curve rather than the bottom of the
+        window: on a closed surface "down" is toward the centre, and at
+        planetary zoom a straight-edged fill would cut across the world.
+        """
+        depth = camera.span * 0.75 + self._planet.radius * 0.02
+        under = heights - depth if floor is None else floor
+        top_x, top_y = camera.surface_to_screen(self._planet, arc, heights)
+        bot_x, bot_y = camera.surface_to_screen(self._planet, arc, under)
+        polygon = [
+            _point((x, y)) for x, y in zip(np.asarray(top_x), np.asarray(top_y), strict=True)
+        ] + [
+            _point((x, y))
+            for x, y in zip(np.asarray(bot_x)[::-1], np.asarray(bot_y)[::-1], strict=True)
+        ]
+        if len(polygon) >= 3:
+            pygame.draw.polygon(surface, colour, polygon)
+
+    def _draw_water(
+        self, surface: pygame.Surface, camera: Camera, arc: NDArray[np.float64]
+    ) -> None:
+        """Draw standing water as a level surface over the ground beneath it."""
+        water = self._water
+        if water is None or water.depth.size == 0:
+            return
+        count = water.depth.size
+        index = np.mod(
+            (arc / self._planet.circumference * count).astype(np.int64), count
+        )
+        depth = water.depth[index]
+        wet = depth > 0.0
+        if not wet.any():
+            return
+        ground = self._terrain.height(arc)
+        top = ground + depth
+        lit = self.lit_mask(camera) if self._spin is not None else np.ones(arc.shape, bool)
+        for start, stop, is_wet in contiguous_runs(wet):
+            if not is_wet or stop - start < 2:
+                continue
+            piece = slice(start, stop)
+            day = bool(lit[start])
+            self._fill_below(
+                surface, camera, arc[piece], top[piece],
+                _WATER_LIT if day else _WATER,
+                floor=ground[piece],
+            )
 
 class Sidebar:
     """A list of what is in the system, and which of it you are watching.

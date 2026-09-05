@@ -108,7 +108,7 @@ class TestSelectingVellumGetsYouToTheGround:
     def test_the_row_click_lands_on_the_planet_and_follows(self) -> None:
         from sim.view.app import _camera_for, _demo_world, targets_for
 
-        star, _, planet, _, _ = _demo_world()
+        star, _, planet, *_ = _demo_world()
         targets = targets_for(star, planet)
         assert [t.name for t in targets] == ["Kell", "Vellum"]
 
@@ -124,7 +124,7 @@ class TestSelectingVellumGetsYouToTheGround:
     def test_and_the_ground_is_reachable_by_scrolling_from_there(self) -> None:
         from sim.view.app import _camera_for, _demo_world, targets_for
 
-        star, _, planet, _, _ = _demo_world()
+        star, _, planet, *_ = _demo_world()
         camera = frame(cam(), targets_for(star, planet)[1])
         for _ in range(9):
             camera = camera.zoomed(4.0)
@@ -138,5 +138,5 @@ class TestSelectingVellumGetsYouToTheGround:
     def test_selecting_kell_does_not_pretend_the_star_has_ground(self) -> None:
         from sim.view.app import _demo_world, targets_for
 
-        star, _, planet, _, _ = _demo_world()
+        star, _, planet, *_ = _demo_world()
         assert not targets_for(star, planet)[0].has_ground

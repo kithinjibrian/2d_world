@@ -59,27 +59,27 @@ def journey(circumference: float) -> list[Camera]:
 
 class TestTheWholeRangeIsReachable:
     def test_every_band_is_visited(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, _, planet, _, _ = world
+        _, _, planet, *_ = world
         bands = {c.band for c in journey(planet.circumference)}
         assert bands == set(ScaleBand), f"never reached {set(ScaleBand) - bands}"
 
     def test_ground_is_reachable(self, world) -> None:  # type: ignore[no-untyped-def]
         # The defect: zoom limits were absolute px-per-world-unit constants,
         # so on a world whose orbit is 1.0 the deepest zoom was still REGIONAL.
-        _, _, planet, _, _ = world
+        _, _, planet, *_ = world
         assert any(c.band is ScaleBand.GROUND for c in journey(planet.circumference))
 
     def test_zoom_can_go_below_the_terrain_floor(self, world) -> None:  # type: ignore[no-untyped-def]
         # Otherwise "below terrain detail" could never be reported, and the
         # honesty about the resolution floor would be untestable.
-        _, _, planet, terrain, _ = world
+        _, _, planet, terrain, *_ = world
         assert any(
             terrain.is_clamped_at(c.metres_per_pixel)
             for c in journey(planet.circumference)
         )
 
     def test_terrain_has_detail_throughout_the_ground_band(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, _, planet, terrain, _ = world
+        _, _, planet, terrain, *_ = world
         entering_ground = next(
             c for c in journey(planet.circumference) if c.band is ScaleBand.GROUND
         )
@@ -93,20 +93,24 @@ class TestNothingSwallowsTheView:
     def test_no_frame_is_a_flat_wash_of_one_colour(self, world) -> None:  # type: ignore[no-untyped-def]
         """The gold-screen defect.
 
-        An unculled circle of radius 2e7 px covers everything. Asserting that
-        some background survives catches any drawable that paints the viewport
-        edge to edge.
+        An unculled circle of radius 2e7 px covers everything. This originally
+        asserted that some *background* survived every frame — which stopped
+        being true once the ground was filled: standing on Vellum, rock
+        legitimately covers the window. The property that still holds, and
+        still catches a runaway primitive, is that no frame is a single flat
+        colour.
         """
-        star, trajectory, planet, terrain, spin = world
+        star, trajectory, planet, terrain, spin, *_ = world
         surface = pygame.Surface((WIDTH, HEIGHT))
         for camera in journey(planet.circumference):
             focused = _camera_for(camera, planet, following=True, anchor=0.0)
             surface.fill(BACKGROUND)
             _rebuild(star, trajectory, planet, terrain, spin).draw(focused, surface)
             pixels = pygame.surfarray.array3d(surface)
-            is_background = np.all(pixels == np.array(BACKGROUND), axis=2)
-            assert is_background.any(), (
-                f"the whole viewport was painted over at {camera.band.value} "
+            # Cheaper than counting distinct colours, and asks the same thing:
+            # does any pixel differ from the corner?
+            assert bool((pixels != pixels[0, 0]).any()), (
+                f"the whole viewport is one flat colour at {camera.band.value} "
                 f"(scale {camera.scale:.3e})"
             )
 
@@ -119,7 +123,7 @@ class TestFollowingLandsOnTheGround:
         than the viewport that puts the ground thousands of pixels away, so
         zooming in showed empty space where the world should be.
         """
-        _, _, planet, _, _ = world
+        _, _, planet, *_ = world
         for camera in journey(planet.circumference):
             if camera.span > planet.circumference:
                 continue  # planet still fits; centring on it is right
@@ -140,7 +144,7 @@ class TestTheSystemViewHoldsStill:
     """
 
     def test_the_camera_does_not_move_at_system_zoom(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, trajectory, planet, _, _ = world
+        _, trajectory, planet, *_ = world
         camera = Camera(0.0, 0.0, WIDTH / 6.0, WIDTH, HEIGHT,
                         reference_length=planet.circumference)
         assert camera.band is ScaleBand.SYSTEM
@@ -154,7 +158,7 @@ class TestTheSystemViewHoldsStill:
         assert len(focuses) == 1, "the view moved while the planet orbited"
 
     def test_it_still_follows_once_the_planet_is_worth_following(self, world) -> None:  # type: ignore[no-untyped-def]
-        _, _, planet, _, _ = world
+        _, _, planet, *_ = world
         close = Camera(0.0, 0.0, WIDTH / (planet.circumference * 10.0), WIDTH, HEIGHT,
                        reference_length=planet.circumference)
         assert close.band is not ScaleBand.SYSTEM
@@ -184,7 +188,7 @@ class TestThePlanetIsVisibleAtEveryZoom:
         return bool(np.all(patch == np.array(VELLUM), axis=2).any())
 
     def test_the_planet_is_marked_at_system_zoom(self, world) -> None:  # type: ignore[no-untyped-def]
-        star, trajectory, planet, terrain, spin = world
+        star, trajectory, planet, terrain, spin, *_ = world
         camera = Camera(0.0, 0.0, WIDTH / 6.0, WIDTH, HEIGHT,
                         reference_length=planet.circumference)
         surface = pygame.Surface((WIDTH, HEIGHT))
@@ -197,7 +201,7 @@ class TestThePlanetIsVisibleAtEveryZoom:
 
     @pytest.mark.parametrize("scale_factor", [1.0, 1e2, 1e4])
     def test_the_marker_survives_zooming_further_out(self, world, scale_factor: float) -> None:  # type: ignore[no-untyped-def]
-        star, trajectory, planet, terrain, spin = world
+        star, trajectory, planet, terrain, spin, *_ = world
         camera = Camera(0.0, 0.0, (WIDTH / 6.0) / scale_factor, WIDTH, HEIGHT,
                         reference_length=planet.circumference)
         surface = pygame.Surface((WIDTH, HEIGHT))

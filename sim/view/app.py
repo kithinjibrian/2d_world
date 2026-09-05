@@ -29,6 +29,7 @@ Used by: run as ``python -m sim.view.app``
 from __future__ import annotations
 
 from collections.abc import Sequence
+from functools import lru_cache
 
 import numpy as np
 import pygame
@@ -51,6 +52,7 @@ from sim.view.render import (
 )
 from sim.view.scene import Scene
 from sim.view.sidebar import Target, frame, row_at
+from sim.water import WaterState, analyse, fill
 
 __all__ = ["main", "run"]
 
@@ -59,14 +61,20 @@ _ZOOM_STEP = 1.25
 _PAN_FRACTION = 0.08
 _TIMESTEP = 2e-3
 _STAR_DISPLAY_RADIUS = 0.02
+_WATER_SAMPLES = 1 << 12
 _MIN_WIDTH = 960
 _MIN_HEIGHT = 600
 
 
-def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain, Spin]:
+@lru_cache(maxsize=1)
+def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain, Spin, WaterState]:
     """Build the world there is to look at so far.
 
-    A star, an orbit, a disc, and ground. Water, air and life do not exist
+    Cached: the world is deterministic, so building it twice is waste. Filling
+    the basins is the expensive part -- a fraction of a second at this
+    resolution, and quadratic in it.
+
+    A star, an orbit, a disc, ground and water. Air and life do not exist
     yet; the viewer was built before them (DECISION-016) so each becomes
     visible the moment it lands, and terrain is the first to do so.
 
@@ -104,7 +112,19 @@ def _demo_world() -> tuple[Kell, Trajectory, Disc, Terrain, Spin]:
     mass = Quantity(3.0e-6, MASS)
     spin = Spin(rate=100.0, circumference=planet.circumference, mass=mass)
     assert spin.rate < breakup_rate(mass, planet.circumference)
-    return star, trajectory, planet, terrain, spin
+
+    # WORLD CONSTANT: total water, as an area -- the world is two-dimensional,
+    # so water is measured in area and not volume. Not derived; how much water
+    # a world has is an initial condition.
+    profile = np.linspace(0.0, planet.circumference, _WATER_SAMPLES, endpoint=False)
+    heights = np.asarray(terrain.height(profile))
+    water = fill(
+        heights,
+        analyse(heights),
+        water_area=terrain.amplitude * planet.circumference * 0.06,
+        spacing=planet.circumference / _WATER_SAMPLES,
+    )
+    return star, trajectory, planet, terrain, spin, water
 
 
 def _default_size() -> tuple[int, int]:
@@ -128,7 +148,7 @@ def run(width: int | None = None, height: int | None = None) -> None:
     surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     clock = pygame.time.Clock()
 
-    star, trajectory, planet, terrain, spin = _demo_world()
+    star, trajectory, planet, terrain, spin, water = _demo_world()
     scene = _rebuild(star, trajectory, planet, terrain)
 
     camera = Camera(
@@ -213,7 +233,7 @@ def run(width: int | None = None, height: int | None = None) -> None:
         targets = targets_for(star, planet)
         scene = _rebuild(
             star, trajectory, planet, terrain, spin, step * _TIMESTEP, running_clock,
-            targets, selected,
+            targets, selected, water,
         )
         looking = _camera_for(camera, planet, following, anchor, anchor_height)
 
@@ -362,12 +382,13 @@ def _rebuild(
     clock_running: bool = True,
     targets: Sequence[Target] = (),
     selected: int | None = None,
+    water: WaterState | None = None,
 ) -> Scene:
     scene = Scene()
     scene.add(StarDisc(star))
     scene.add(OrbitTrace(trajectory))
     scene.add(PlanetDisc(planet))
-    ground = TerrainTrace(planet, terrain, spin=spin)
+    ground = TerrainTrace(planet, terrain, spin=spin, water=water)
     ground.time = time
     scene.add(ground)
     scene.add(Sidebar(targets, selected))

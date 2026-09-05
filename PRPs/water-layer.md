@@ -57,7 +57,15 @@ local minima is a function of how finely you sample it:
      65,536      5.86e-10           12,980
     262,144      1.46e-10           52,101
 
-Counting minima means choosing the answer. The scale-free alternative is **topological persistence**
+Counting minima means choosing the answer. > **FINDING (2026-09-06, Session 23) — "scale-free" below is too strong.** Measured over a 64-fold
+> refinement of one terrain, raw minima grow with an exponent of **1.00** and deep basins with an
+> exponent of **0.28**. Persistence makes the count converge far more slowly; it does not make it
+> converge. For terrain that is fractal at every scale there is *no* sampling-independent basin
+> count, because there are genuinely basins at every scale. The conclusion the PRP draws is
+> unchanged and if anything stronger: a count must be reported with **both** its threshold and its
+> resolution.
+
+The scale-free alternative is **topological persistence**
 — a basin's depth below the point where it merges into a deeper one — which does not depend on
 sampling. Measured on the current demo terrain:
 
